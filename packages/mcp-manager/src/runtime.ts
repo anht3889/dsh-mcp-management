@@ -13,7 +13,7 @@ import type {
   McpServerId,
   McpServerRecord,
 } from '@deepseek-ai/dsh-mcp-mgmt-mcp'
-import { OAUTH_REDIRECT_PATH, createOAuthController, type OAuthController } from '@deepseek-ai/dsh-mcp-mgmt-oauth'
+import { OAUTH_REDIRECT_PATH, OAuthSecretKey, createOAuthController, type OAuthCallbackQuery, type OAuthController } from '@deepseek-ai/dsh-mcp-mgmt-oauth'
 import { loadCatalog, saveCatalog, validateRecord } from './catalog.ts'
 import { startConnection, type ConnectionHandle, type ConnectionHooks } from './connection.ts'
 import { createLogBuffer, type LogBuffer } from './logs.ts'
@@ -223,6 +223,33 @@ export class McpManagerRuntime extends McpRuntime {
     await Promise.all(Object.entries(secrets).map(async ([key, value]) => {
       await this.secrets.set(id, key, value)
     }))
+  }
+
+  /**
+   * Returns configured states for the secrets associated with a server.
+   * @param id - server identifier.
+   * @returns value-free configured states keyed by logical secret name.
+   */
+  async describeSecrets(id: McpServerId): Promise<Record<string, { configured: boolean }>> {
+    const record = this.requireRecord(id)
+    const keys = record.auth.kind === 'headers'
+      ? record.auth.headerNames
+      : record.auth.kind === 'oauth'
+        ? Object.values(OAuthSecretKey)
+        : []
+    return Object.fromEntries(await Promise.all(keys.map(async key => [key, await this.secrets.describe(id, key)] as const)))
+  }
+
+  /**
+   * Exchanges a browser OAuth callback and starts an enabled server.
+   * @param query - authorization response fields from the redirect URI.
+   * @returns the authorized server identifier.
+   */
+  async handleOAuthCallback(query: OAuthCallbackQuery): Promise<{ serverId: string }> {
+    const result = await this.oauth.handleCallback(query)
+    const id = result.serverId as McpServerId
+    if (this.requireRecord(id).enabled) await this.connect(id)
+    return result
   }
 
   /** Stops all live server generations. */

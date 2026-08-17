@@ -26,6 +26,9 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: link:../../../../../deepseek-harness/packages/util/home-paths
         version: link:../../../../../deepseek-harness/packages/util/home-paths
+      '@deepseek-ai/dsh-host-webserver':
+        specifier: link:../../../../../deepseek-harness/packages/host/webserver
+        version: link:../../../../../deepseek-harness/packages/host/webserver
       '@deepseek-ai/dsh-mcp-mgmt-mcp':
         specifier: workspace:*
         version: link:../mcp

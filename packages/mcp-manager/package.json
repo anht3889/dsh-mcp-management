@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-home-paths": "link:../../../../../deepseek-harness/packages/util/home-paths",
+    "@deepseek-ai/dsh-host-webserver": "link:../../../../../deepseek-harness/packages/host/webserver",
     "@deepseek-ai/dsh-mcp-mgmt-mcp": "workspace:*",
     "@deepseek-ai/dsh-mcp-mgmt-oauth": "workspace:*",
     "@deepseek-ai/dsh-tools": "link:../../../../../deepseek-harness/packages/core/tools",

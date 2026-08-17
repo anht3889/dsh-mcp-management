@@ -7,6 +7,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-tools'
+import { registerHttpApi, type McpManagementWebServer } from './http-api.ts'
 import { McpManagerRuntime, type McpManagerRuntimeConfig } from './runtime.ts'
 import type { CredentialsApi } from './secrets.ts'
 
@@ -49,4 +50,10 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     credentials: ctx.get('credentials') as CredentialsApi | undefined,
   })
   ctx.effect(() => () => runtime.dispose(), 'mcp-manager.runtime')
+  const webServer = ctx.get('webServer') as McpManagementWebServer | undefined
+  if (webServer === undefined) {
+    console.warn('mcp-manager: webServer service unavailable; HTTP API disabled')
+    return
+  }
+  ctx.effect(() => registerHttpApi(webServer, runtime), 'mcp-manager.http-api')
 }
