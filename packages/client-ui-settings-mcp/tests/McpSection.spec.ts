@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, expect, test, vi } from 'vitest'
 import { McpManagementApi } from '../src/client/api.ts'
 import { McpSection } from '../src/client/McpSection.tsx'
+import { zh } from '../src/client/locales.ts'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -33,7 +34,7 @@ test('shows a server name returned by the management API', async () => {
   const root = createRoot(container)
 
   await act(async () => {
-    root.render(createElement(McpSection, { api: new McpManagementApi() }))
+    root.render(createElement(McpSection, { api: new McpManagementApi(), t: (key) => zh[key] }))
   })
 
   expect(container.textContent).toContain('Filesystem')

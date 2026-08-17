@@ -33,7 +33,8 @@ export function apply(ctx: ClientContext): void {
     name: 'settings.section',
     id: 'mcp',
     order: 40,
+    locale: NS,
     label: () => t('nav'),
-    inject: () => ({ api }),
+    inject: () => ({ api, t }),
   }, McpSection))
 }

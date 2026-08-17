@@ -9,6 +9,27 @@ export type McpSettingsKey =
   | 'authorize'
   | 'enabled'
   | 'empty'
+  | 'serverList'
+  | 'loading'
+  | 'hideLogs'
+  | 'logsPanel'
+  | 'noLogs'
+  | 'addServer'
+  | 'editServer'
+  | 'serverName'
+  | 'serverId'
+  | 'transport'
+  | 'transportStdio'
+  | 'transportHttp'
+  | 'command'
+  | 'url'
+  | 'save'
+  | 'cancel'
+  | 'statusDisconnected'
+  | 'statusConnecting'
+  | 'statusConnected'
+  | 'statusReconnecting'
+  | 'statusFailed'
 
 /** Chinese product copy. */
 export const zh: Record<McpSettingsKey, string> = {
@@ -21,6 +42,27 @@ export const zh: Record<McpSettingsKey, string> = {
   authorize: '授权',
   enabled: '已启用',
   empty: '尚未配置 MCP 服务。',
+  serverList: 'MCP 服务列表',
+  loading: '正在加载 MCP 服务…',
+  hideLogs: '隐藏日志',
+  logsPanel: '连接日志',
+  noLogs: '暂无日志。',
+  addServer: '添加 MCP 服务',
+  editServer: '编辑 MCP 服务',
+  serverName: '名称',
+  serverId: '标识',
+  transport: '传输方式',
+  transportStdio: '标准输入输出',
+  transportHttp: 'HTTP',
+  command: '命令',
+  url: 'URL',
+  save: '保存',
+  cancel: '取消',
+  statusDisconnected: '未连接',
+  statusConnecting: '正在连接',
+  statusConnected: '已连接',
+  statusReconnecting: '正在重连',
+  statusFailed: '连接失败',
 }
 
 /** English fallback copy. */
@@ -34,4 +76,25 @@ export const en: Record<McpSettingsKey, string> = {
   authorize: 'Authorize',
   enabled: 'Enabled',
   empty: 'No MCP servers are configured.',
+  serverList: 'MCP server list',
+  loading: 'Loading MCP servers…',
+  hideLogs: 'Hide logs',
+  logsPanel: 'Connection logs',
+  noLogs: 'No logs yet.',
+  addServer: 'Add MCP server',
+  editServer: 'Edit MCP server',
+  serverName: 'Name',
+  serverId: 'Identifier',
+  transport: 'Transport',
+  transportStdio: 'Standard input/output',
+  transportHttp: 'HTTP',
+  command: 'Command',
+  url: 'URL',
+  save: 'Save',
+  cancel: 'Cancel',
+  statusDisconnected: 'Disconnected',
+  statusConnecting: 'Connecting',
+  statusConnected: 'Connected',
+  statusReconnecting: 'Reconnecting',
+  statusFailed: 'Connection failed',
 }
