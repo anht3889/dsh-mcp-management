@@ -6,8 +6,8 @@
 import { randomUUID } from 'node:crypto'
 import { rename, rm, writeFile, readFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import { SERVER_NAME_PATTERN } from '@deepseek-ai/dsh-mcp-mgmt-mcp/src/brand.ts'
-import type { McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp/src/types.ts'
+import { SERVER_NAME_PATTERN } from '@deepseek-ai/dsh-mcp-mgmt-mcp/brand'
+import type { McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp/types'
 
 /**
  * Loads persisted non-secret MCP server records.
