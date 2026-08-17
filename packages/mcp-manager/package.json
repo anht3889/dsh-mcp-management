@@ -18,7 +18,9 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-mcp-mgmt-mcp": "workspace:*"
+    "@deepseek-ai/dsh-mcp-mgmt-mcp": "workspace:*",
+    "@deepseek-ai/dsh-tools": "link:../../../../../deepseek-harness/packages/core/tools",
+    "@modelcontextprotocol/sdk": "^1.12.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0"
