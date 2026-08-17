@@ -10,7 +10,7 @@ Architecture and scope live in [docs/design.md](docs/design.md).
 From npm (after the packages are published):
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add @deepseek-ai/dsh-mcp-mgmt-bundle@0.0.1-rc.1
+npx @deepseek-ai/dsh plugin --profile web add @anht3889/dsh-mcp-mgmt-bundle@0.0.1-rc.1
 ```
 
 From a local checkout (development):
@@ -41,9 +41,9 @@ Each server's callback URL is the live web origin plus that server's `auth.redir
 
 | Package | Role |
 |---|---|
-| [`@deepseek-ai/dsh-mcp-mgmt-bundle`](packages/bundle/) | Installable surface: patch, manager, Settings UI |
-| [`@deepseek-ai/dsh-mcp-mgmt-mcp`](packages/mcp/) | `ctx.mcp` vocabulary (library) |
-| [`@deepseek-ai/dsh-mcp-mgmt-oauth`](packages/mcp-oauth/) | PKCE OAuth + discovery (library) |
+| [`@anht3889/dsh-mcp-mgmt-bundle`](packages/bundle/) | Installable surface: patch, manager, Settings UI |
+| [`@anht3889/dsh-mcp-mgmt-mcp`](packages/mcp/) | `ctx.mcp` vocabulary (library) |
+| [`@anht3889/dsh-mcp-mgmt-oauth`](packages/mcp-oauth/) | PKCE OAuth + discovery (library) |
 
 ## Smoke check
 

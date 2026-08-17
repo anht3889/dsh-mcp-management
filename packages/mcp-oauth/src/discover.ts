@@ -1,7 +1,7 @@
 /**
  * Discovers OAuth endpoints (and optionally registers a client) from an MCP
  * server URL using the MCP SDK's RFC 9728 / RFC 8414 / RFC 7591 helpers.
- * @module @deepseek-ai/dsh-mcp-mgmt-oauth/discover
+ * @module @anht3889/dsh-mcp-mgmt-oauth/discover
  */
 
 import {

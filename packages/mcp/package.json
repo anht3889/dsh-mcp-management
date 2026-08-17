@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-mcp-mgmt-mcp",
+  "name": "@anht3889/dsh-mcp-mgmt-mcp",
   "description": "MCP management vocabulary for DeepSeek Harness (ctx.mcp types)",
   "version": "0.0.1-rc.1",
   "publishConfig": {

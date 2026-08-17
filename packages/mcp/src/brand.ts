@@ -1,6 +1,6 @@
 /**
  * Nominal identifiers and naming rules for managed MCP servers.
- * @module @deepseek-ai/dsh-mcp-mgmt-mcp/brand
+ * @module @anht3889/dsh-mcp-mgmt-mcp/brand
  */
 
 /** A managed MCP server's opaque identifier. */

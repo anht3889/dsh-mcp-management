@@ -65,7 +65,7 @@ packages/
   mcp-oauth/                # OAuth + discovery (library)
 ```
 
-**npm scope:** `@deepseek-ai/dsh-mcp-mgmt-<name>` (avoids collision with `@deepseek-ai/dsh-mcp-client`).
+**npm scope:** `@anht3889/dsh-mcp-mgmt-<name>` (personal publish scope; avoids collision with `@deepseek-ai/dsh-mcp-client`).
 
 **Peers / deps (align to a documented harness release):** `@deepseek-ai/cordis`, `@deepseek-ai/dsh-tools`, `@deepseek-ai/dsh-host-webserver`, `@deepseek-ai/dsh-credentials` (optional at runtime), `@deepseek-ai/schemastery`, `@modelcontextprotocol/sdk`, client slot/UI peers as required by the Settings section pattern.
 

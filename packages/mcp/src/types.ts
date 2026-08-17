@@ -1,6 +1,6 @@
 /**
  * Data-only vocabulary for managed MCP servers.
- * @module @deepseek-ai/dsh-mcp-mgmt-mcp/types
+ * @module @anht3889/dsh-mcp-mgmt-mcp/types
  */
 
 import type { McpServerId } from './brand.ts'

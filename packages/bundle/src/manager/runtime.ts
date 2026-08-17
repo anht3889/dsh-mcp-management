@@ -1,6 +1,6 @@
 /**
  * Durable MCP catalog operations and live connection supervision.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/runtime
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/runtime
  */
 
 import { mkdir } from 'node:fs/promises'
@@ -12,8 +12,8 @@ import type {
   McpRuntime,
   McpServerId,
   McpServerRecord,
-} from '@deepseek-ai/dsh-mcp-mgmt-mcp'
-import { OAUTH_REDIRECT_PATH, OAuthSecretKey, createOAuthController, discoverOAuthFromServerUrl, type DiscoveredOAuthConfig, type OAuthCallbackQuery, type OAuthController } from '@deepseek-ai/dsh-mcp-mgmt-oauth'
+} from '@anht3889/dsh-mcp-mgmt-mcp'
+import { OAUTH_REDIRECT_PATH, OAuthSecretKey, createOAuthController, discoverOAuthFromServerUrl, type DiscoveredOAuthConfig, type OAuthCallbackQuery, type OAuthController } from '@anht3889/dsh-mcp-mgmt-oauth'
 import { loadCatalog, saveCatalog, validateRecord } from './catalog.ts'
 import { startConnection, type ConnectionHandle, type ConnectionHooks } from './connection.ts'
 import { createLogBuffer, type LogBuffer } from './logs.ts'

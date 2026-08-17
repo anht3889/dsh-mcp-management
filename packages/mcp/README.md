@@ -1,4 +1,4 @@
-# `@deepseek-ai/dsh-mcp-mgmt-mcp`
+# `@anht3889/dsh-mcp-mgmt-mcp`
 
 `ctx.mcp` vocabulary: `McpRuntime`, server record/status types, and the `McpServerId` brand.
 

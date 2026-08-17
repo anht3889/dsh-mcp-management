@@ -1,11 +1,11 @@
 /**
  * HTTP routes for the local MCP management UI.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/http-api
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/http-api
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { asMcpServerId, type McpConnectionStatus, type McpLogEntry, type McpServerId, type McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp'
-import type { DiscoveredOAuthConfig, OAuthCallbackQuery } from '@deepseek-ai/dsh-mcp-mgmt-oauth'
+import { asMcpServerId, type McpConnectionStatus, type McpLogEntry, type McpServerId, type McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp'
+import type { DiscoveredOAuthConfig, OAuthCallbackQuery } from '@anht3889/dsh-mcp-mgmt-oauth'
 import { validateRecord } from './catalog.ts'
 import { renderOAuthCompletionPage } from './oauth-page.ts'
 

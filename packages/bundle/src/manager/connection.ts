@@ -1,11 +1,11 @@
 /**
  * Supervises one managed MCP connection and its registered tools.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/connection
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/connection
  */
 
 import { Client } from '@modelcontextprotocol/sdk/client'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import type { McpConnectionStatus, McpLogEntry, McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp/types'
+import type { McpConnectionStatus, McpLogEntry, McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 import { syncTools, type ToolContext, type ToolDisposers } from './tools.ts'
 import { createTransport } from './transport.ts'
 

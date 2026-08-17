@@ -1,13 +1,13 @@
 /**
  * Durable storage for non-secret MCP server records.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/catalog
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/catalog
  */
 
 import { randomUUID } from 'node:crypto'
 import { rename, rm, writeFile, readFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import { SERVER_NAME_PATTERN } from '@deepseek-ai/dsh-mcp-mgmt-mcp/brand'
-import type { McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp/types'
+import { SERVER_NAME_PATTERN } from '@anht3889/dsh-mcp-mgmt-mcp/brand'
+import type { McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 
 /**
  * Loads persisted non-secret MCP server records.

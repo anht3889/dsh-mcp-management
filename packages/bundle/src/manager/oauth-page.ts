@@ -1,12 +1,12 @@
 /**
  * Completion page served to the OAuth login window after the identity provider
  * redirects back to the local callback route.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/oauth-page
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/oauth-page
  */
 
 /**
  * Message channel the login window uses to tell the Settings section that
- * authorization finished. `@deepseek-ai/dsh-mcp-mgmt-bundle`
+ * authorization finished. `@anht3889/dsh-mcp-mgmt-bundle`
  * holds the reading half; a client bundle cannot import this package, so both
  * sides spell the literal.
  */

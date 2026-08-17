@@ -1,6 +1,6 @@
 /**
  * MCP management capability seam exposed as `ctx.mcp`.
- * @module @deepseek-ai/dsh-mcp-mgmt-mcp
+ * @module @anht3889/dsh-mcp-mgmt-mcp
  */
 
 import type { Context } from '@deepseek-ai/cordis'

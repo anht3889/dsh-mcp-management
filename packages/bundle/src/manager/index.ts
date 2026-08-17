@@ -1,6 +1,6 @@
 /**
  * Cordis plugin that provides the managed MCP runtime on `ctx.mcp`.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager
  */
 
 import type { Context } from '@deepseek-ai/cordis'

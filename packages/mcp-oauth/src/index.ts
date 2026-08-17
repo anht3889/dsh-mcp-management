@@ -1,6 +1,6 @@
 /**
  * OAuth authorization-code flow support for managed MCP HTTP servers.
- * @module @deepseek-ai/dsh-mcp-mgmt-oauth
+ * @module @anht3889/dsh-mcp-mgmt-oauth
  */
 
 import { randomBytes } from 'node:crypto'

@@ -1,12 +1,12 @@
 /**
  * Creates MCP client transports from durable server records.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/transport
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/transport
  */
 
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import type { McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp/types'
+import type { McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 
 /**
  * Creates the configured MCP transport.

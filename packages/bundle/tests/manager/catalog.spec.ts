@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { loadCatalog, saveCatalog, validateRecord } from '../../src/manager/catalog.ts'
-import { asMcpServerId } from '@deepseek-ai/dsh-mcp-mgmt-mcp/brand'
+import { asMcpServerId } from '@anht3889/dsh-mcp-mgmt-mcp/brand'
 
 const base = () => ({
   id: asMcpServerId('11111111-1111-4111-8111-111111111111'),

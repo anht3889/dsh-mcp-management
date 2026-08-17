@@ -1,12 +1,12 @@
 /**
  * Package-owned invariant companion for the MCP Settings interface.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/invariant
+ * @module @anht3889/dsh-mcp-mgmt-bundle/invariant
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-mcp-mgmt-bundle'
+const PACKAGE_NAME = '@anht3889/dsh-mcp-mgmt-bundle'
 
 /** Cordis companion plugin name. */
 export const name = 'mcp-mgmt-bundle-invariant'

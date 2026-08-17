@@ -1,6 +1,6 @@
 /**
  * PKCE verifier and challenge generation for OAuth authorization-code flows.
- * @module @deepseek-ai/dsh-mcp-mgmt-oauth/pkce
+ * @module @anht3889/dsh-mcp-mgmt-oauth/pkce
  */
 
 import { createHash, randomBytes } from 'node:crypto'

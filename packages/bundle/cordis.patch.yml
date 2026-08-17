@@ -3,11 +3,11 @@
 # dependencies of those entries.
 - insert:
     - id: mcp-mgmt-manager
-      name: '@deepseek-ai/dsh-mcp-mgmt-bundle/manager'
+      name: '@anht3889/dsh-mcp-mgmt-bundle/manager'
       config:
         catalogPath: !!js dshHomePath('mcp', 'servers.json')
         secretsPath: !!js dshHomePath('mcp', 'secrets.yaml')
 
     # Host stub so client-modules discovers this package's `./client` entry.
     - id: mcp-mgmt-ui
-      name: '@deepseek-ai/dsh-mcp-mgmt-bundle'
+      name: '@anht3889/dsh-mcp-mgmt-bundle'

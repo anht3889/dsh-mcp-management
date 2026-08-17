@@ -1,9 +1,9 @@
 /**
  * Bounded in-memory lifecycle logs for one managed MCP server.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/logs
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/logs
  */
 
-import type { McpLogEntry } from '@deepseek-ai/dsh-mcp-mgmt-mcp/types'
+import type { McpLogEntry } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 
 /** The number of lifecycle entries retained when no capacity is specified. */
 const DEFAULT_CAPACITY = 500

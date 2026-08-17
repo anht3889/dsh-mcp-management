@@ -1,7 +1,7 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { describe, expect, it, vi } from 'vitest'
-import { asMcpServerId } from '@deepseek-ai/dsh-mcp-mgmt-mcp/brand'
-import type { McpConnectionStatus, McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp/types'
+import { asMcpServerId } from '@anht3889/dsh-mcp-mgmt-mcp/brand'
+import type { McpConnectionStatus, McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 import { startConnection } from '../../src/manager/connection.ts'
 
 describe('startConnection', () => {

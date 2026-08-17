@@ -1,6 +1,6 @@
 /**
  * Secret storage for managed MCP servers.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/secrets
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/secrets
  */
 
 import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'

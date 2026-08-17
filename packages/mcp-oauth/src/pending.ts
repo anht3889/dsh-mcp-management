@@ -1,6 +1,6 @@
 /**
  * In-memory OAuth authorization requests awaiting an IdP callback.
- * @module @deepseek-ai/dsh-mcp-mgmt-oauth/pending
+ * @module @anht3889/dsh-mcp-mgmt-oauth/pending
  */
 
 /** One pending OAuth authorization-code exchange. */

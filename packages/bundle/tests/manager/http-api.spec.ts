@@ -2,8 +2,8 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, describe, expect, it } from 'vitest'
-import { asMcpServerId } from '@deepseek-ai/dsh-mcp-mgmt-mcp/brand'
-import type { McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp/types'
+import { asMcpServerId } from '@anht3889/dsh-mcp-mgmt-mcp/brand'
+import type { McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 import { registerHttpApi, type McpManagementApi } from '../../src/manager/http-api.ts'
 
 describe('registerHttpApi', () => {

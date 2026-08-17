@@ -1,11 +1,11 @@
 /**
  * Login-window handling for OAuth-authenticated MCP servers.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/client/oauth-login
+ * @module @anht3889/dsh-mcp-mgmt-bundle/client/oauth-login
  */
 
 /**
  * Message channel the login window uses to report its outcome. The writing half
- * is the manager's completion page (`@deepseek-ai/dsh-mcp-mgmt-bundle/manager`); a
+ * is the manager's completion page (`@anht3889/dsh-mcp-mgmt-bundle/manager`); a
  * client bundle cannot import that package, so both sides spell the literal.
  */
 export const OAUTH_MESSAGE_SOURCE = 'dsh-mcp-management/oauth'

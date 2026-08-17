@@ -1,6 +1,6 @@
 /**
  * Stable, model-facing names for managed MCP tools.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/naming
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/naming
  */
 
 import { createHash } from 'node:crypto'

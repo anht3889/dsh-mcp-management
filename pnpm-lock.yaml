@@ -17,15 +17,15 @@ importers:
 
   packages/bundle:
     dependencies:
+      '@anht3889/dsh-mcp-mgmt-mcp':
+        specifier: workspace:^
+        version: link:../mcp
+      '@anht3889/dsh-mcp-mgmt-oauth':
+        specifier: workspace:^
+        version: link:../mcp-oauth
       '@deepseek-ai/dsh-home-paths':
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(@deepseek-ai/cordis@deepseek-harness+vendor+cordis)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@deepseek-harness+vendor+cordis))
-      '@deepseek-ai/dsh-mcp-mgmt-mcp':
-        specifier: workspace:^
-        version: link:../mcp
-      '@deepseek-ai/dsh-mcp-mgmt-oauth':
-        specifier: workspace:^
-        version: link:../mcp-oauth
       '@deepseek-ai/schemastery':
         specifier: ^3.18.1
         version: 3.18.1

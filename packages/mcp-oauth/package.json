@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-mcp-mgmt-oauth",
+  "name": "@anht3889/dsh-mcp-mgmt-oauth",
   "description": "OAuth PKCE and discovery helpers for managed MCP HTTP servers",
   "version": "0.0.1-rc.1",
   "publishConfig": {

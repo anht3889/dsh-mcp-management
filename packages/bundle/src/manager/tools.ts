@@ -1,6 +1,6 @@
 /**
  * Bridges MCP tool discovery into the harness tool registry.
- * @module @deepseek-ai/dsh-mcp-mgmt-bundle/manager/tools
+ * @module @anht3889/dsh-mcp-mgmt-bundle/manager/tools
  */
 
 import type { Client } from '@modelcontextprotocol/sdk/client'
