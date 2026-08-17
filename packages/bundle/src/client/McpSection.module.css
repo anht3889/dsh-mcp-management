@@ -1,0 +1,131 @@
+.section {
+  color: var(--dsw-fg, inherit);
+  display: grid;
+  gap: var(--dsw-space-4, 16px);
+}
+
+.header, .server, .actions, .serverSummary {
+  align-items: center;
+  display: flex;
+  gap: var(--dsw-space-3, 12px);
+}
+
+.header {
+  justify-content: space-between;
+}
+
+.title, .intro {
+  margin: 0;
+}
+
+.intro {
+  color: var(--dsw-fg-muted, inherit);
+  margin-top: var(--dsw-space-1, 4px);
+}
+
+.content {
+  display: grid;
+  gap: var(--dsw-space-4, 16px);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.7fr);
+}
+
+.list {
+  display: grid;
+  gap: var(--dsw-space-2, 8px);
+}
+
+.server, .editor, .logs {
+  background: var(--dsw-bg-elevated, transparent);
+  border: 1px solid var(--dsw-border, currentColor);
+  border-radius: var(--dsw-radius-md, 8px);
+  padding: var(--dsw-space-3, 12px);
+}
+
+.server {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.loginStatus, .loginError {
+  flex-basis: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.loginStatus {
+  color: var(--dsw-fg-muted, inherit);
+}
+
+.loginError {
+  color: var(--dsw-danger-fg, inherit);
+}
+
+.serverSummary {
+  flex-wrap: wrap;
+}
+
+.actions {
+  flex-wrap: wrap;
+}
+
+.primaryButton, .secondaryButton {
+  background: var(--dsw-button-bg, transparent);
+  border: 1px solid var(--dsw-button-border, currentColor);
+  border-radius: var(--dsw-radius-sm, 4px);
+  color: var(--dsw-button-fg, inherit);
+  cursor: pointer;
+  padding: var(--dsw-space-2, 8px) var(--dsw-space-3, 12px);
+}
+
+.secondaryButton {
+  background: var(--dsw-button-secondary-bg, transparent);
+}
+
+.toggle {
+  display: inline-flex;
+  gap: var(--dsw-space-1, 4px);
+}
+
+.editor {
+  display: grid;
+  gap: var(--dsw-space-3, 12px);
+}
+
+.editor label {
+  display: grid;
+  gap: var(--dsw-space-1, 4px);
+}
+
+.editor input, .editor select {
+  background: var(--dsw-input-bg, transparent);
+  border: 1px solid var(--dsw-input-border, currentColor);
+  border-radius: var(--dsw-radius-sm, 4px);
+  color: var(--dsw-input-fg, inherit);
+  padding: var(--dsw-space-2, 8px);
+}
+
+.logs {
+  overflow-wrap: anywhere;
+}
+
+.logs ol {
+  display: grid;
+  gap: var(--dsw-space-1, 4px);
+  margin: var(--dsw-space-2, 8px) 0 0;
+  padding-inline-start: var(--dsw-space-4, 16px);
+}
+
+.error {
+  color: var(--dsw-danger-fg, inherit);
+}
+
+@media (max-width: 720px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .server {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -8,9 +8,25 @@ import { PendingAuthorizations } from './pending.ts'
 import { createPkce, type Pkce } from './pkce.ts'
 
 export { createPkce, type Pkce } from './pkce.ts'
+export {
+  discoverOAuthFromServerUrl,
+  type DiscoverOAuthOptions,
+  type DiscoveredOAuthConfig,
+} from './discover.ts'
 
-/** The loopback webserver path that receives OAuth authorization callbacks. */
-export const OAUTH_REDIRECT_PATH = '/mcp-management/oauth/callback'
+/**
+ * Default loopback path that receives OAuth authorization callbacks.
+ *
+ * Authorization servers compare redirect URIs to a client's registered set
+ * exactly. Pre-registered public MCP clients are commonly registered for
+ * `http://<loopback>:<port>/callback` with a free port, so this default keeps
+ * such a client usable; a server whose client requires another path carries it
+ * in `redirectPath`.
+ */
+export const OAUTH_REDIRECT_PATH = '/callback'
+
+/** The management-prefixed callback path, always served by the HTTP API. */
+export const OAUTH_PREFIXED_REDIRECT_PATH = '/mcp-management/oauth/callback'
 
 /** Logical secret keys owned by OAuth authorization. */
 export const OAuthSecretKey = {
@@ -79,12 +95,16 @@ export interface OAuthAuth {
   tokenUrl: string
   /** Scopes requested from the authorization server. */
   scopes: string[]
+  /** Loopback path this client's registered redirect URI uses. */
+  redirectPath: string
 }
 
 /** The server data required by the OAuth controller. */
 export interface OAuthServer {
   /** The MCP server identifier. */
   id: string
+  /** The MCP endpoint URL, used as the RFC 8707 resource indicator. */
+  url?: string
   /** The server's authentication configuration. */
   auth: OAuthAuth | { kind: string }
 }
@@ -112,8 +132,14 @@ export interface OAuthControllerOptions {
   getServer(id: string): OAuthServer | undefined
   /** Storage for OAuth client credentials and tokens. */
   secrets: SecretStore
-  /** Full loopback callback URI for the live webserver. */
-  redirectUri: string
+  /**
+   * Resolves the browser-visible origin serving the callback at authorization
+   * time. The origin depends on the live web server's port, which is unknown
+   * when the controller is created.
+   *
+   * @returns the origin without a trailing slash, such as `http://127.0.0.1:3080`.
+   */
+  redirectOrigin(): string
   /** HTTP client used for authorization-code and refresh exchanges. */
   fetch?: typeof globalThis.fetch
   /** Clock used to calculate token expiry. */
@@ -172,11 +198,13 @@ export function createOAuthController(options: OAuthControllerOptions): OAuthCon
       const url = new URL(server.auth.authorizeUrl)
       url.searchParams.set('response_type', 'code')
       url.searchParams.set('client_id', server.auth.clientId)
-      url.searchParams.set('redirect_uri', options.redirectUri)
+      url.searchParams.set('redirect_uri', redirectUri(options.redirectOrigin(), server))
       url.searchParams.set('code_challenge', codeChallenge)
       url.searchParams.set('code_challenge_method', 'S256')
       if (server.auth.scopes.length > 0) url.searchParams.set('scope', server.auth.scopes.join(' '))
       url.searchParams.set('state', state)
+      const resource = resourceIndicator(server)
+      if (resource !== undefined) url.searchParams.set('resource', resource)
       return { authorizeUrl: url.toString() }
     },
 
@@ -193,7 +221,7 @@ export function createOAuthController(options: OAuthControllerOptions): OAuthCon
       const tokens = await exchangeToken(fetch, server, options.secrets, authorization.id, {
         grant_type: 'authorization_code',
         code: query.code,
-        redirect_uri: options.redirectUri,
+        redirect_uri: redirectUri(options.redirectOrigin(), server),
         code_verifier: authorization.codeVerifier,
       })
       await storeTokens(options.secrets, authorization.id, tokens, now())
@@ -234,6 +262,33 @@ function requireOAuthServer(server: OAuthServer | undefined, id: string): OAuthS
   return server as OAuthServer & { auth: OAuthAuth }
 }
 
+/**
+ * Composes the redirect URI the authorization server must match against the
+ * client's registered set.
+ *
+ * @param origin - the browser-visible callback origin.
+ * @param server - the server whose client fixes the callback path.
+ * @returns the absolute redirect URI.
+ */
+function redirectUri(origin: string, server: OAuthServer & { auth: OAuthAuth }): string {
+  return `${origin.replace(/\/$/, '')}${server.auth.redirectPath}`
+}
+
+/**
+ * Names the protected resource the issued token must be audience-restricted to
+ * (RFC 8707), which the MCP authorization specification requires clients to
+ * send. HTTP servers carry their endpoint URL; stdio servers have none.
+ *
+ * @param server - the server being authorized.
+ * @returns the resource indicator, or undefined when the server has no URL.
+ */
+function resourceIndicator(server: OAuthServer): string | undefined {
+  if (server.url === undefined) return undefined
+  const url = new URL(server.url)
+  url.hash = ''
+  return url.toString()
+}
+
 async function exchangeToken(
   fetch: typeof globalThis.fetch,
   server: OAuthServer & { auth: OAuthAuth },
@@ -242,6 +297,7 @@ async function exchangeToken(
   parameters: Record<string, string>,
 ): Promise<OAuthTokenResponse> {
   const clientSecret = await secrets.get(id, OAuthSecretKey.clientSecret)
+  const resource = resourceIndicator(server)
   const response = await fetch(server.auth.tokenUrl, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -249,6 +305,7 @@ async function exchangeToken(
       ...parameters,
       client_id: server.auth.clientId,
       ...(clientSecret === undefined ? {} : { client_secret: clientSecret }),
+      ...(resource === undefined ? {} : { resource }),
     }),
   })
   if (!response.ok) {

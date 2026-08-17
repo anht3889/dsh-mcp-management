@@ -3,7 +3,7 @@
   "references": [
     { "path": "./packages/mcp" },
     { "path": "./packages/mcp-oauth" },
-    { "path": "./packages/mcp-manager" },
-    { "path": "./packages/client-ui-settings-mcp" }
+    { "path": "./packages/bundle/tsconfig.manager.json" },
+    { "path": "./packages/bundle" }
   ]
 }

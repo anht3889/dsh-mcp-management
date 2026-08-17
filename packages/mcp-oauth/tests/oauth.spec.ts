@@ -8,7 +8,9 @@ import {
 } from '../src/index.ts'
 
 const serverId = '11111111-1111-4111-8111-111111111111'
-const redirectUri = `http://127.0.0.1:3000${OAUTH_REDIRECT_PATH}`
+const origin = 'http://127.0.0.1:3000'
+const redirectUriValue = `${origin}${OAUTH_REDIRECT_PATH}`
+const redirectOrigin = (): string => origin
 
 describe('createPkce', () => {
   it('creates an RFC 7636 verifier and S256 challenge', () => {
@@ -30,7 +32,8 @@ describe('createOAuthController', () => {
       expect(body.get('grant_type')).toBe('authorization_code')
       expect(body.get('code')).toBe('authorization-code')
       expect(body.get('client_id')).toBe('client-id')
-      expect(body.get('redirect_uri')).toBe(redirectUri)
+      expect(body.get('redirect_uri')).toBe(redirectUriValue)
+      expect(body.get('resource')).toBe('https://mcp.example.test/mcp')
       expect(body.get('code_verifier')).toMatch(/^[A-Za-z0-9_-]{43,128}$/)
       return Response.json({
         access_token: 'access-token',
@@ -41,7 +44,7 @@ describe('createOAuthController', () => {
     const controller = createOAuthController({
       getServer: getOAuthServer,
       secrets,
-      redirectUri,
+      redirectOrigin,
       fetch,
       now: () => new Date('2026-08-17T00:00:00.000Z'),
     })
@@ -56,12 +59,46 @@ describe('createOAuthController', () => {
     expect(await secrets.get(serverId, 'OAUTH_EXPIRES_AT')).toBe('2026-08-17T01:00:00.000Z')
   })
 
+  it('authorizes at the callback path and resource the server configures', async () => {
+    const controller = createOAuthController({
+      getServer: id => {
+        const server = getOAuthServer(id)
+        return server === undefined ? undefined : { ...server, auth: { ...server.auth, redirectPath: '/callback' } }
+      },
+      secrets: createMemorySecretStore(),
+      redirectOrigin,
+    })
+
+    const { authorizeUrl } = await controller.start(serverId)
+    const parameters = new URL(authorizeUrl).searchParams
+
+    expect(parameters.get('redirect_uri')).toBe(`${origin}/callback`)
+    expect(parameters.get('resource')).toBe('https://mcp.example.test/mcp')
+    expect(parameters.get('code_challenge_method')).toBe('S256')
+    expect(parameters.get('scope')).toBe('mcp:read mcp:write')
+  })
+
+  it('omits the resource indicator for a server without a URL', async () => {
+    const controller = createOAuthController({
+      getServer: id => {
+        const server = getOAuthServer(id)
+        return server === undefined ? undefined : { id: server.id, auth: server.auth }
+      },
+      secrets: createMemorySecretStore(),
+      redirectOrigin,
+    })
+
+    const { authorizeUrl } = await controller.start(serverId)
+
+    expect(new URL(authorizeUrl).searchParams.has('resource')).toBe(false)
+  })
+
   it('rejects a failed token exchange without storing tokens', async () => {
     const secrets = createMemorySecretStore()
     const controller = createOAuthController({
       getServer: getOAuthServer,
       secrets,
-      redirectUri,
+      redirectOrigin,
       fetch: async () => new Response('invalid authorization code', { status: 400 }),
     })
 
@@ -79,12 +116,14 @@ function getOAuthServer(id: string) {
   if (id !== serverId) return undefined
   return {
     id,
+    url: 'https://mcp.example.test/mcp',
     auth: {
       kind: 'oauth' as const,
       clientId: 'client-id',
       authorizeUrl: 'https://idp.example.test/authorize',
       tokenUrl: 'https://idp.example.test/token',
       scopes: ['mcp:read', 'mcp:write'],
+      redirectPath: OAUTH_REDIRECT_PATH,
     },
   }
 }

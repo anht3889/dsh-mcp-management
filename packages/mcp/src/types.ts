@@ -15,6 +15,14 @@ export type McpAuthConfig =
       authorizeUrl: string
       tokenUrl: string
       scopes: string[]
+      /**
+       * Loopback path that receives the authorization redirect. Authorization
+       * servers match a client's registered redirect URIs exactly, so a
+       * pre-registered public client accepts only the path it was registered
+       * with; a client obtained by Dynamic Client Registration accepts the
+       * default.
+       */
+      redirectPath: string
     }
 
 /** A durable, non-secret MCP server configuration. */

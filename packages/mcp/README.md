@@ -1,5 +1,5 @@
 # `@deepseek-ai/dsh-mcp-mgmt-mcp`
 
-Defines the `ctx.mcp` MCP-management service vocabulary and its unavailable runtime stub.
+`ctx.mcp` vocabulary: `McpRuntime`, server record/status types, and the `McpServerId` brand.
 
-Install the linked DeepSeek Harness checkout, then run `pnpm --filter @deepseek-ai/cordis exec tsc -b` there before building this package; the development dependency is path-coupled to that checkout.
+`McpRuntime` is an interface, not a cordis `Service` subclass. Profile plugins cannot resolve the installation's `@deepseek-ai/cordis` at runtime, so providers publish with `ctx.provide('mcp', runtime)` and every cordis import in this repository stays type-only. `mcpRuntimeOf(ctx)` reads the seam through `ctx.get`.

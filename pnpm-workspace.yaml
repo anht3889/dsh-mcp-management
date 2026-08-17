@@ -1,2 +1,6 @@
 packages:
   - 'packages/*'
+
+# Harness peers come from the profile runtime, never from this workspace's tree;
+# auto-installing them resolves prerelease peer ranges that are not published.
+autoInstallPeers: false

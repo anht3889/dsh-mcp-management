@@ -1,12 +1,13 @@
-# The manager installs its concrete runtime on `ctx.mcp`; mounting the
-# `mcp` Service stub separately would be redundant. `mcp-oauth` is a library.
+# The bundle package is the only installable surface. It mounts its own
+# manager and Settings UI exports; `mcp` / `mcp-oauth` stay ordinary library
+# dependencies of those entries.
 - insert:
     - id: mcp-mgmt-manager
-      name: '@deepseek-ai/dsh-mcp-mgmt-manager'
+      name: '@deepseek-ai/dsh-mcp-mgmt-bundle/manager'
       config:
         catalogPath: !!js dshHomePath('mcp', 'servers.json')
         secretsPath: !!js dshHomePath('mcp', 'secrets.yaml')
 
-    # The host stub lets client-modules discover this package's browser entry.
+    # Host stub so client-modules discovers this package's `./client` entry.
     - id: mcp-mgmt-ui
-      name: '@deepseek-ai/dsh-mcp-mgmt-client-ui-settings-mcp'
+      name: '@deepseek-ai/dsh-mcp-mgmt-bundle'

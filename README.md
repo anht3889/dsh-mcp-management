@@ -1,28 +1,47 @@
 # dsh-mcp-management
 
 Out-of-tree MCP connection management for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
-
-See the [design spec](docs/superpowers/specs/2026-08-17-mcp-management-design.md) for architecture and scope.
+Architecture and scope live in [docs/design.md](docs/design.md).
 
 **Do not edit `deepseek-harness`.** This repository ships an installable profile bundle only.
 
 ## Install
 
-See [`packages/bundle/README.md`](packages/bundle/README.md) to install `@deepseek-ai/dsh-mcp-mgmt-bundle` in a DeepSeek Harness Web profile and run the manual smoke check.
+Nothing is published to npm yet. Install the bundle by path from this repository root:
 
-## Development checkout layout
-
-The workspace dependencies link to a sibling `deepseek-harness` checkout. Checked-in relative paths assume both repositories are direct children of the same directory:
-
-```text
-workspace/
-├── deepseek-harness/
-└── dsh-mcp-management/
-    └── .worktrees/mcp-management/
+```sh
+pnpm install && pnpm run build
+npx @deepseek-ai/dsh plugin --profile web add ./packages/bundle
 ```
 
-Run `pnpm install` from this worktree after arranging that layout.
+Restart the Web profile after installation.
 
-## OAuth redirect URL
+Do not also mount `@deepseek-ai/dsh-mcp-client` for the same `serverName`s — both register MCP tools and will conflict.
 
-The manager uses the active local web server port to form the OAuth callback URL (`http://127.0.0.1:<port>/mcp-management/oauth/callback`). Set the manager plugin's `publicOrigin` configuration to override that base URL when the browser reaches the server through a different origin.
+## Storage
+
+| Data | Default path |
+|---|---|
+| Non-secret server records | `~/.dsh/mcp/servers.json` |
+| Secrets (tokens, header values, client secret) | `~/.dsh/mcp/secrets.yaml`, or `ctx.credentials` when mounted |
+
+Override with the manager plugin's `catalogPath` / `secretsPath` config.
+
+## OAuth
+
+Each server's callback URL is the live web origin plus that server's `auth.redirectPath` (default `/callback`). Set `publicOrigin` on the manager when the browser reaches the host through a different origin. Authorization servers match the redirect URI exactly; a pre-registered public client usually allows `/callback` on any loopback port. The manager serves every configured path. Authorize and token requests also send the MCP URL as the RFC 8707 `resource` indicator.
+
+## Packages
+
+| Package | Role |
+|---|---|
+| [`@deepseek-ai/dsh-mcp-mgmt-bundle`](packages/bundle/) | Installable surface: patch, manager, Settings UI |
+| [`@deepseek-ai/dsh-mcp-mgmt-mcp`](packages/mcp/) | `ctx.mcp` vocabulary (library) |
+| [`@deepseek-ai/dsh-mcp-mgmt-oauth`](packages/mcp-oauth/) | PKCE OAuth + discovery (library) |
+
+## Smoke check
+
+1. `npx @deepseek-ai/dsh --profile web`
+2. `curl http://127.0.0.1:3080/mcp-management/servers` returns a `servers` array
+3. Open **Settings → MCP**, add and enable a stdio fixture, confirm tools as `mcp__<serverName>__<toolName>`
+4. Optional: OAuth HTTP server → **Authorize** → login window completes and the row shows Connected
