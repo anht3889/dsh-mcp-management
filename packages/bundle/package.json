@@ -1,7 +1,7 @@
 {
   "name": "@anht3889/dsh-mcp-mgmt-bundle",
   "description": "DeepSeek Harness profile bundle for MCP connection management in Web Settings",
-  "version": "0.0.1-rc.1",
+  "version": "0.0.1-rc.2",
   "publishConfig": {
     "access": "public"
   },
@@ -64,8 +64,8 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-home-paths": "0.1.0-rc.6",
-    "@anht3889/dsh-mcp-mgmt-mcp": "workspace:^",
-    "@anht3889/dsh-mcp-mgmt-oauth": "workspace:^",
+    "@anht3889/dsh-mcp-mgmt-mcp": "0.0.1-rc.1",
+    "@anht3889/dsh-mcp-mgmt-oauth": "0.0.1-rc.1",
     "@deepseek-ai/schemastery": "^3.18.1",
     "@modelcontextprotocol/sdk": "^1.12.0"
   },

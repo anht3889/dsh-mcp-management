@@ -18,11 +18,11 @@ importers:
   packages/bundle:
     dependencies:
       '@anht3889/dsh-mcp-mgmt-mcp':
-        specifier: workspace:^
-        version: link:../mcp
+        specifier: 0.0.1-rc.1
+        version: 0.0.1-rc.1(@deepseek-ai/cordis@deepseek-harness+vendor+cordis)
       '@anht3889/dsh-mcp-mgmt-oauth':
-        specifier: workspace:^
-        version: link:../mcp-oauth
+        specifier: 0.0.1-rc.1
+        version: 0.0.1-rc.1
       '@deepseek-ai/dsh-home-paths':
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(@deepseek-ai/cordis@deepseek-harness+vendor+cordis)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@deepseek-harness+vendor+cordis))
@@ -102,6 +102,14 @@ packages:
 
   '@acemir/cssom@0.9.31':
     resolution: {integrity: sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA==}
+
+  '@anht3889/dsh-mcp-mgmt-mcp@0.0.1-rc.1':
+    resolution: {integrity: sha512-DY7g9nB4g7zbaSJTIzjRxalr1m/Ouok8x6/5NgY120LG3KTTFhxdzwdd1Q/rstQuOgF/fw1EO33SZ58juE8WPw==}
+    peerDependencies:
+      '@deepseek-ai/cordis': '*'
+
+  '@anht3889/dsh-mcp-mgmt-oauth@0.0.1-rc.1':
+    resolution: {integrity: sha512-noG/QxZb2C/qFL/9xRvC/GvQW2CbNgL2fZGasJiG9faYNUcD+IsZOn2dGFGjrLz2GXt/+nvFjReOvM24gb+cKA==}
 
   '@asamuzakjp/css-color@5.1.11':
     resolution: {integrity: sha512-KVw6qIiCTUQhByfTd78h2yD1/00waTmm9uy/R7Ck/ctUyAPj+AEDLkQIdJW0T8+qGgj3j5bpNKK7Q3G+LedJWg==}
@@ -1479,6 +1487,17 @@ packages:
 snapshots:
 
   '@acemir/cssom@0.9.31': {}
+
+  '@anht3889/dsh-mcp-mgmt-mcp@0.0.1-rc.1(@deepseek-ai/cordis@deepseek-harness+vendor+cordis)':
+    dependencies:
+      '@deepseek-ai/cordis': link:../deepseek-harness/vendor/cordis
+
+  '@anht3889/dsh-mcp-mgmt-oauth@0.0.1-rc.1':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.30.0
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
 
   '@asamuzakjp/css-color@5.1.11':
     dependencies:

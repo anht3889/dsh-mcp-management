@@ -10,7 +10,7 @@ Architecture and scope live in [docs/design.md](docs/design.md).
 From npm (after the packages are published):
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add @anht3889/dsh-mcp-mgmt-bundle@0.0.1-rc.1
+npx @deepseek-ai/dsh plugin --profile web add @anht3889/dsh-mcp-mgmt-bundle@0.0.1-rc.2
 ```
 
 From a local checkout (development):
