@@ -3,10 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "lib/catalog.js",
-  "types": "lib/types/catalog.d.ts",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
   "exports": {
     ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./catalog": {
       "types": "./lib/types/catalog.d.ts",
       "default": "./lib/catalog.js"
     }
