@@ -106,71 +106,94 @@ export interface SecretStoreOptions {
  */
 export function createSecretStore(options: SecretStoreOptions): SecretStore {
   const { credentials, filePath } = options
+  const mutate = createMutationQueue()
 
   if (credentials !== undefined) {
     const indexPath = `${filePath}.index.json`
     return {
       async set(id, key, value) {
-        const ref = secretReference(id, key)
-        await credentials.set(ref, value)
-        const index = await loadCredentialIndex(indexPath)
-        const refs = index[id] ?? []
-        if (!refs.includes(ref)) refs.push(ref)
-        index[id] = refs
-        await saveCredentialIndex(indexPath, index)
+        await mutate(async () => {
+          const ref = secretReference(id, key)
+          await credentials.set(ref, value)
+          const index = await loadCredentialIndex(indexPath)
+          const refs = index[id] ?? []
+          if (!refs.includes(ref)) refs.push(ref)
+          index[id] = refs
+          await saveCredentialIndex(indexPath, index)
+        })
       },
       async get(id, key) {
         return (await credentials.resolve(secretReference(id, key)))?.value
       },
       async unset(id, key) {
-        const ref = secretReference(id, key)
-        await credentials.unset(ref)
-        const index = await loadCredentialIndex(indexPath)
-        const refs = index[id]?.filter((candidate) => candidate !== ref) ?? []
-        if (refs.length === 0) delete index[id]
-        else index[id] = refs
-        await saveCredentialIndex(indexPath, index)
+        await mutate(async () => {
+          const ref = secretReference(id, key)
+          await credentials.unset(ref)
+          const index = await loadCredentialIndex(indexPath)
+          const refs = index[id]?.filter((candidate) => candidate !== ref) ?? []
+          if (refs.length === 0) delete index[id]
+          else index[id] = refs
+          await saveCredentialIndex(indexPath, index)
+        })
       },
       async describe(id, key) {
         const { configured } = await credentials.describe(secretReference(id, key))
         return { configured }
       },
       async wipeServer(id) {
-        const index = await loadCredentialIndex(indexPath)
-        const refs = index[id] ?? []
-        await Promise.all(refs.map((ref) => credentials.unset(ref)))
-        delete index[id]
-        await saveCredentialIndex(indexPath, index)
+        await mutate(async () => {
+          const index = await loadCredentialIndex(indexPath)
+          const refs = index[id] ?? []
+          await Promise.all(refs.map((ref) => credentials.unset(ref)))
+          delete index[id]
+          await saveCredentialIndex(indexPath, index)
+        })
       },
     }
   }
 
   return {
     async set(id, key, value) {
-      const values = await loadFallbackFile(filePath)
-      values[secretReference(id, key)] = value
-      await saveFallbackFile(filePath, values)
+      await mutate(async () => {
+        const values = await loadFallbackFile(filePath)
+        values[secretReference(id, key)] = value
+        await saveFallbackFile(filePath, values)
+      })
     },
     async get(id, key) {
       return (await loadFallbackFile(filePath))[secretReference(id, key)]
     },
     async unset(id, key) {
-      const values = await loadFallbackFile(filePath)
-      delete values[secretReference(id, key)]
-      await saveFallbackFile(filePath, values)
+      await mutate(async () => {
+        const values = await loadFallbackFile(filePath)
+        delete values[secretReference(id, key)]
+        await saveFallbackFile(filePath, values)
+      })
     },
     async describe(id, key) {
       const value = (await loadFallbackFile(filePath))[secretReference(id, key)]
       return { configured: value !== undefined }
     },
     async wipeServer(id) {
-      const values = await loadFallbackFile(filePath)
-      const prefix = secretReferencePrefix(id)
-      for (const ref of Object.keys(values)) {
-        if (ref.startsWith(prefix)) delete values[ref]
-      }
-      await saveFallbackFile(filePath, values)
+      await mutate(async () => {
+        const values = await loadFallbackFile(filePath)
+        const prefix = secretReferencePrefix(id)
+        for (const ref of Object.keys(values)) {
+          if (ref.startsWith(prefix)) delete values[ref]
+        }
+        await saveFallbackFile(filePath, values)
+      })
     },
+  }
+}
+
+/** Serializes read-modify-write secret file and index updates. */
+function createMutationQueue(): <T>(operation: () => Promise<T>) => Promise<T> {
+  let tail = Promise.resolve()
+  return async <T>(operation: () => Promise<T>): Promise<T> => {
+    const result = tail.then(operation, operation)
+    tail = result.then(() => undefined, () => undefined)
+    return await result
   }
 }
 

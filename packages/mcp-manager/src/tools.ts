@@ -58,18 +58,23 @@ export async function syncTools(
   const disposers: ToolDisposers = new Map()
   let cursor: string | undefined
 
-  do {
-    const result = await client.listTools(cursor === undefined ? undefined : { cursor })
-    for (const tool of result.tools) {
-      const name = publicToolName(opts.serverName, tool.name)
-      if (disposers.has(name)) {
-        throw new Error(`MCP server "${opts.serverName}" listed duplicate tool "${tool.name}"`)
+  try {
+    do {
+      const result = await client.listTools(cursor === undefined ? undefined : { cursor })
+      for (const tool of result.tools) {
+        const name = publicToolName(opts.serverName, tool.name)
+        if (disposers.has(name)) {
+          throw new Error(`MCP server "${opts.serverName}" listed duplicate tool "${tool.name}"`)
+        }
+        const definition = createToolDefinition(client, tool, opts, name)
+        disposers.set(name, ctx.tools.register(definition))
       }
-      const definition = createToolDefinition(client, tool, opts, name)
-      disposers.set(name, ctx.tools.register(definition))
-    }
-    cursor = result.nextCursor
-  } while (cursor !== undefined)
+      cursor = result.nextCursor
+    } while (cursor !== undefined)
+  } catch (error) {
+    for (const dispose of disposers.values()) dispose()
+    throw error
+  }
 
   return disposers
 }

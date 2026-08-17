@@ -3,7 +3,7 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, expect, test, vi } from 'vitest'
 import { McpManagementApi } from '../src/client/api.ts'
-import { McpSection } from '../src/client/McpSection.tsx'
+import { McpSection, newServer } from '../src/client/McpSection.tsx'
 import { zh } from '../src/client/locales.ts'
 
 afterEach(() => {
@@ -40,4 +40,8 @@ test('shows a server name returned by the management API', async () => {
   expect(container.textContent).toContain('Filesystem')
   expect(fetch).toHaveBeenCalledWith('/mcp-management/servers', expect.any(Object))
   root.unmount()
+})
+
+test('creates a UUID for a new server', () => {
+  expect(newServer().id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
 })

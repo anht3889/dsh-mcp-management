@@ -44,6 +44,25 @@ describe('McpManagerRuntime', () => {
     expect(dispose).toHaveBeenCalledOnce()
     expect(runtime.getStatus(asMcpServerId('server'))).toEqual({ state: 'disconnected' })
   })
+
+  it('connects an enabled server after upserting it', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-mcp-manager-runtime-'))
+    const startConnection = vi.fn(() => ({ stop: vi.fn(async () => {}) }))
+    const ctx = new Context()
+    ctx.provide('tools', { register: vi.fn(() => vi.fn()) })
+    const runtime = await McpManagerRuntime.create(ctx, {
+      catalogPath: join(root, 'servers.json'),
+      secretsPath: join(root, 'secrets.yaml'),
+      startConnection,
+    })
+
+    await runtime.upsert({ ...record(), enabled: true })
+
+    expect(startConnection).toHaveBeenCalledWith(
+      expect.objectContaining({ id: asMcpServerId('server'), enabled: true }),
+      expect.any(Object),
+    )
+  })
 })
 
 function record(): McpServerRecord {

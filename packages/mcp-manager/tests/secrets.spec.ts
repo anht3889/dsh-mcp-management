@@ -28,6 +28,22 @@ describe('createSecretStore', () => {
     expect(await store.describe(serverId, 'oauth_access')).toEqual({ configured: true })
   })
 
+  it('keeps concurrent fallback secret writes', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'mcp-secrets-'))
+    const filePath = join(directory, 'secrets.yaml')
+    const store = createSecretStore({ filePath })
+
+    await Promise.all([
+      store.set(serverId, 'oauth_access', 'access-token'),
+      store.set(serverId, 'oauth_refresh', 'refresh-token'),
+    ])
+
+    expect(JSON.parse(await readFile(filePath, 'utf8'))).toMatchObject({
+      MCP_11111111111141118111111111111111_OAUTH_ACCESS: 'access-token',
+      MCP_11111111111141118111111111111111_OAUTH_REFRESH: 'refresh-token',
+    })
+  })
+
   it('removes every secret belonging to a server', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'mcp-secrets-'))
     const store = createSecretStore({ filePath: join(directory, 'secrets.yaml') })

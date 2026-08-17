@@ -112,6 +112,7 @@ export class McpManagerRuntime extends McpRuntime {
     this.records.set(record.id, record)
     this.statuses.set(record.id, { state: 'disconnected' })
     this.logs.set(record.id, this.logs.get(record.id) ?? createLogBuffer())
+    if (record.enabled) await this.connect(record.id)
     return record
   }
 

@@ -44,6 +44,17 @@ describe('registerHttpApi', () => {
     expect(api.upserted).toMatchObject({ id: asMcpServerId('server'), serverName: 'edited' })
   })
 
+  it('returns a 4xx response for an invalid upsert record', async () => {
+    const api = fakeApi()
+    const request = await start(api, servers)
+
+    const response = await request('/mcp-management/servers/server', 'PUT', { serverName: '' })
+
+    expect(response.status).toBeGreaterThanOrEqual(400)
+    expect(response.status).toBeLessThan(500)
+    expect(api.upserted).toBeUndefined()
+  })
+
   it('returns not found for unrecognized routes', async () => {
     const request = await start(fakeApi(), servers)
 

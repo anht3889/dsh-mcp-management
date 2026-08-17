@@ -6,9 +6,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { asMcpServerId, type McpConnectionStatus, type McpLogEntry, type McpServerId, type McpServerRecord } from '@deepseek-ai/dsh-mcp-mgmt-mcp'
 import type { OAuthCallbackQuery } from '@deepseek-ai/dsh-mcp-mgmt-oauth'
+import { validateRecord } from './catalog.ts'
 
 /** The web-server registration capability consumed by the management API. */
 export interface McpManagementWebServer {
+  /** The active HTTP listening port when the host exposes it. */
+  readonly port?: number
   /**
    * Registers a route below the MCP management prefix.
    * @param route - route ownership and handler.
@@ -99,7 +102,9 @@ async function route(req: IncomingMessage, res: ServerResponse, mcp: McpManageme
   if (req.method === 'PUT' && parts.length === 2 && parts[0] === 'servers') {
     const id = asMcpServerId(parts[1])
     const record = requireRecord(await readJson(req))
-    const persisted = await mcp.upsert({ ...record, id })
+    const candidate = { ...record, id }
+    validateRecord(candidate, mcp.list())
+    const persisted = await mcp.upsert(candidate)
     respond(res, 200, await serverView(mcp, persisted))
     return
   }

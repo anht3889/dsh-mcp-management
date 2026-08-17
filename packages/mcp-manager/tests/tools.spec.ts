@@ -48,4 +48,26 @@ describe('syncTools', () => {
     )
     expect(disposers.values().next().value).toBe(dispose)
   })
+
+  it('unregisters already registered tools when a later registration fails', async () => {
+    const dispose = vi.fn()
+    const register = vi.fn()
+      .mockReturnValueOnce(dispose)
+      .mockImplementationOnce(() => { throw new Error('tool name conflict') })
+    const client = {
+      listTools: vi.fn().mockResolvedValue({
+        tools: [
+          { name: 'first', inputSchema: { type: 'object' } },
+          { name: 'second', inputSchema: { type: 'object' } },
+        ],
+      }),
+    }
+
+    await expect(syncTools({ tools: { register } } as never, client as never, {
+      serverName: 'github',
+      toolCallTimeoutMs: 60_000,
+    })).rejects.toThrow('tool name conflict')
+
+    expect(dispose).toHaveBeenCalledOnce()
+  })
 })
