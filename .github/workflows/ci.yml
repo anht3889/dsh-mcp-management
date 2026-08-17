@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout dsh-mcp-management
+        uses: actions/checkout@v4
+        with:
+          path: dsh-mcp-management
+
+      - name: Checkout deepseek-harness (build sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.HARNESS_REPOSITORY || 'deepseek-ai/deepseek-harness' }}
+          path: deepseek-harness
+          token: ${{ secrets.HARNESS_TOKEN || github.token }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dsh-mcp-management/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: dsh-mcp-management
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: dsh-mcp-management
+        run: pnpm run build
+
+      - name: Test
+        working-directory: dsh-mcp-management
+        run: pnpm run test

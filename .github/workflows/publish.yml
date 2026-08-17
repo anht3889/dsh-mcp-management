@@ -1,0 +1,71 @@
+name: Publish npm
+
+# Publishes the three @anht3889 packages whose versions are already set in
+# package.json. Bump versions in a commit first, then run this workflow (or
+# create a GitHub Release). Already-published versions are skipped.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Pack and print what would publish, but do not upload
+        type: boolean
+        default: false
+  release:
+    types: [published]
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout dsh-mcp-management
+        uses: actions/checkout@v4
+        with:
+          path: dsh-mcp-management
+
+      - name: Checkout deepseek-harness (build sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.HARNESS_REPOSITORY || 'deepseek-ai/deepseek-harness' }}
+          path: deepseek-harness
+          token: ${{ secrets.HARNESS_TOKEN || github.token }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+          cache-dependency-path: dsh-mcp-management/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: dsh-mcp-management
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: dsh-mcp-management
+        run: pnpm run build
+
+      - name: Test
+        working-directory: dsh-mcp-management
+        run: pnpm run test
+
+      - name: Publish packages
+        working-directory: dsh-mcp-management
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+        run: bash scripts/publish-npm.sh

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Publish the three installable packages in dependency order.
+# Skips a version that is already on the registry.
+set -euo pipefail
+
+if [[ -z "${NODE_AUTH_TOKEN:-}" && "${DRY_RUN:-false}" != "true" ]]; then
+  echo "NODE_AUTH_TOKEN (NPM_TOKEN secret) is required to publish" >&2
+  exit 1
+fi
+
+packages=(
+  packages/mcp
+  packages/mcp-oauth
+  packages/bundle
+)
+
+publish_one() {
+  local dir="$1"
+  local name version tag args=()
+  name="$(node -p "require('./${dir}/package.json').name")"
+  version="$(node -p "require('./${dir}/package.json').version")"
+
+  if [[ "$version" == *-* ]]; then
+    tag=next
+  else
+    tag=latest
+  fi
+
+  if npm view "${name}@${version}" version >/dev/null 2>&1; then
+    echo "skip ${name}@${version} (already on npm)"
+    return 0
+  fi
+
+  args=(publish --access public --no-git-checks --tag "$tag")
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    args+=(--dry-run)
+  fi
+
+  echo "publish ${name}@${version} (tag=${tag})"
+  pnpm --filter "$name" "${args[@]}"
+}
+
+for dir in "${packages[@]}"; do
+  publish_one "$dir"
+done
