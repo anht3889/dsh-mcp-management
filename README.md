@@ -59,6 +59,8 @@ Yes — CI can build and publish. The repo includes:
 - [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — install, build, test on push/PR
 - [`.github/workflows/publish.yml`](.github/workflows/publish.yml) — publish on **workflow_dispatch** or when a **GitHub Release** is published
 
+Both first run [`.github/actions/setup-workspace`](.github/actions/setup-workspace/action.yml), which checks out `deepseek-harness` as a sibling directory and runs its `build:lib`. That build is required: this workspace's `link:` dependencies and TypeScript project references resolve to harness `lib/types` declarations, which exist only after the harness is built.
+
 ### One-time setup
 
 1. Create an npm [granular access token](https://www.npmjs.com/settings/~/tokens) with **Read and write** for `@anht3889/*` (or Automation classic token). Prefer a token that can publish without interactive OTP.
@@ -66,7 +68,7 @@ Yes — CI can build and publish. The repo includes:
    - Name: `NPM_TOKEN`
    - Value: the token
 3. If `deepseek-ai/deepseek-harness` is private, add secret `HARNESS_TOKEN` (a PAT that can clone it). Public harness needs no extra secret.
-4. Optional repo variable `HARNESS_REPOSITORY` if the harness lives at another GitHub path (default `deepseek-ai/deepseek-harness`).
+4. Optional repo variables: `HARNESS_REPOSITORY` if the harness lives at another GitHub path (default `deepseek-ai/deepseek-harness`), and `HARNESS_REF` to pin a harness branch or tag instead of its default branch.
 
 ### Publish steps
 

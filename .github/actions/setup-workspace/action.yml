@@ -1,0 +1,67 @@
+name: Setup workspace
+description: >
+  Checks out and builds the deepseek-harness sibling that this workspace's link:
+  dependencies and TypeScript project references resolve to, then installs this
+  workspace. Expects this repository to be checked out at dsh-mcp-management.
+
+inputs:
+  harness-repository:
+    description: owner/name of the harness repository to build against
+    required: false
+    default: deepseek-ai/deepseek-harness
+  harness-ref:
+    description: harness git ref; empty selects its default branch
+    required: false
+    default: ''
+  harness-token:
+    description: token used to check out the harness when it is not public
+    required: true
+  registry-url:
+    description: npm registry to authenticate against; empty configures none
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout deepseek-harness
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.harness-repository }}
+        ref: ${{ inputs.harness-ref }}
+        path: deepseek-harness
+        token: ${{ inputs.harness-token }}
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 11.7.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        registry-url: ${{ inputs.registry-url }}
+        cache: pnpm
+        cache-dependency-path: |
+          dsh-mcp-management/pnpm-lock.yaml
+          deepseek-harness/pnpm-lock.yaml
+
+    - name: Install harness
+      shell: bash
+      working-directory: deepseek-harness
+      run: pnpm install --frozen-lockfile
+
+    # Packages here import harness types from lib/types declarations and
+    # reference harness tsconfig projects, so the sibling must be built before
+    # this workspace compiles. build:web only bundles the harness web app, which
+    # nothing here depends on.
+    - name: Build harness libraries
+      shell: bash
+      working-directory: deepseek-harness
+      run: pnpm run build:lib
+
+    - name: Install workspace
+      shell: bash
+      working-directory: dsh-mcp-management
+      run: pnpm install --frozen-lockfile
