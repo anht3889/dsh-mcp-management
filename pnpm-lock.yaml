@@ -15,6 +15,21 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(jsdom@28.1.0)(vite@8.2.1(@types/node@26.2.0))
 
+  packages/bundle:
+    dependencies:
+      '@deepseek-ai/dsh-mcp-mgmt-client-ui-settings-mcp':
+        specifier: workspace:*
+        version: link:../client-ui-settings-mcp
+      '@deepseek-ai/dsh-mcp-mgmt-manager':
+        specifier: workspace:*
+        version: link:../mcp-manager
+      '@deepseek-ai/dsh-mcp-mgmt-mcp':
+        specifier: workspace:*
+        version: link:../mcp
+      '@deepseek-ai/dsh-mcp-mgmt-oauth':
+        specifier: workspace:*
+        version: link:../mcp-oauth
+
   packages/client-ui-settings-mcp:
     devDependencies:
       '@deepseek-ai/cordis':

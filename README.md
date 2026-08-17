@@ -6,4 +6,6 @@ See the [design spec](docs/superpowers/specs/2026-08-17-mcp-management-design.md
 
 **Do not edit `deepseek-harness`.** This repository ships an installable profile bundle only.
 
-Install and usage instructions will be added when the profile bundle is ready (Task 11).
+## Install
+
+See [`packages/bundle/README.md`](packages/bundle/README.md) to install `@deepseek-ai/dsh-mcp-mgmt-bundle` in a DeepSeek Harness Web profile and run the manual smoke check.
