@@ -108,14 +108,16 @@ export function createSecretStore(options: SecretStoreOptions): SecretStore {
   const { credentials, filePath } = options
 
   if (credentials !== undefined) {
-    const serverRefs = new Map<string, Set<string>>()
+    const indexPath = `${filePath}.index.json`
     return {
       async set(id, key, value) {
         const ref = secretReference(id, key)
         await credentials.set(ref, value)
-        const refs = serverRefs.get(id) ?? new Set<string>()
-        refs.add(ref)
-        serverRefs.set(id, refs)
+        const index = await loadCredentialIndex(indexPath)
+        const refs = index[id] ?? []
+        if (!refs.includes(ref)) refs.push(ref)
+        index[id] = refs
+        await saveCredentialIndex(indexPath, index)
       },
       async get(id, key) {
         return (await credentials.resolve(secretReference(id, key)))?.value
@@ -123,19 +125,22 @@ export function createSecretStore(options: SecretStoreOptions): SecretStore {
       async unset(id, key) {
         const ref = secretReference(id, key)
         await credentials.unset(ref)
-        const refs = serverRefs.get(id)
-        refs?.delete(ref)
-        if (refs?.size === 0) serverRefs.delete(id)
+        const index = await loadCredentialIndex(indexPath)
+        const refs = index[id]?.filter((candidate) => candidate !== ref) ?? []
+        if (refs.length === 0) delete index[id]
+        else index[id] = refs
+        await saveCredentialIndex(indexPath, index)
       },
       async describe(id, key) {
         const { configured } = await credentials.describe(secretReference(id, key))
         return { configured }
       },
       async wipeServer(id) {
-        const refs = serverRefs.get(id)
-        if (refs === undefined) return
-        await Promise.all([...refs].map((ref) => credentials.unset(ref)))
-        serverRefs.delete(id)
+        const index = await loadCredentialIndex(indexPath)
+        const refs = index[id] ?? []
+        await Promise.all(refs.map((ref) => credentials.unset(ref)))
+        delete index[id]
+        await saveCredentialIndex(indexPath, index)
       },
     }
   }
@@ -213,14 +218,56 @@ async function loadFallbackFile(filePath: string): Promise<Record<string, string
 }
 
 /**
+ * Loads the value-free credential reference index.
+ *
+ * @param filePath - The credential index file path.
+ * @returns Server ids and their credential references.
+ */
+async function loadCredentialIndex(filePath: string): Promise<Record<string, string[]>> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(filePath, 'utf8'))
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new TypeError(`Credential index ${filePath} must contain an object`)
+    }
+    if (Object.values(parsed).some((refs) => !Array.isArray(refs) || refs.some((ref) => typeof ref !== 'string'))) {
+      throw new TypeError(`Credential index ${filePath} must contain string arrays`)
+    }
+    return parsed as Record<string, string[]>
+  } catch (error: unknown) {
+    if (isMissingFileError(error)) return {}
+    throw error
+  }
+}
+
+/**
  * Stores fallback values with owner-only file permissions where supported.
  *
  * @param filePath - The fallback file path.
  * @param values - The credential references and values to store.
  */
 async function saveFallbackFile(filePath: string, values: Record<string, string>): Promise<void> {
+  await savePrivateFile(filePath, JSON.stringify(values))
+}
+
+/**
+ * Stores a credential-reference index without secret values.
+ *
+ * @param filePath - The credential index file path.
+ * @param index - Server ids and their credential references.
+ */
+async function saveCredentialIndex(filePath: string, index: Record<string, string[]>): Promise<void> {
+  await savePrivateFile(filePath, JSON.stringify(index))
+}
+
+/**
+ * Stores private JSON with owner-only file permissions where supported.
+ *
+ * @param filePath - The file path to replace.
+ * @param content - The JSON content to store.
+ */
+async function savePrivateFile(filePath: string, content: string): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true })
-  await writeFile(filePath, JSON.stringify(values), { encoding: 'utf8', mode: 0o600 })
+  await writeFile(filePath, content, { encoding: 'utf8', mode: 0o600 })
   try {
     await chmod(filePath, 0o600)
   } catch {

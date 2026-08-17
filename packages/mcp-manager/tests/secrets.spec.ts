@@ -45,32 +45,62 @@ describe('createSecretStore', () => {
   it('uses credentials instead of the fallback file when available', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'mcp-secrets-'))
     const values = new Map<string, string>()
-    const store = createSecretStore({
-      filePath: join(directory, 'secrets.yaml'),
-      credentials: {
-        async resolve(ref) {
-          const value = values.get(ref)
-          return value === undefined ? undefined : { value }
-        },
-        async describe(ref) {
-          return { configured: values.has(ref) }
-        },
-        async set(ref, value) {
-          values.set(ref, value)
-        },
-        async unset(ref) {
-          values.delete(ref)
-        },
+    const credentials = {
+      async resolve(ref: string) {
+        const value = values.get(ref)
+        return value === undefined ? undefined : { value }
       },
+      async describe(ref: string) {
+        return { configured: values.has(ref) }
+      },
+      async set(ref: string, value: string) {
+        values.set(ref, value)
+      },
+      async unset(ref: string) {
+        values.delete(ref)
+      },
+    }
+    const filePath = join(directory, 'secrets.yaml')
+    const store = createSecretStore({
+      filePath,
+      credentials,
     })
 
     await store.set(serverId, 'oauth_access', 'access-token')
 
     expect(await store.get(serverId, 'oauth_access')).toBe('access-token')
-    await expect(readFile(join(directory, 'secrets.yaml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
+    expect(await readFile(`${filePath}.index.json`, 'utf8')).not.toContain('access-token')
 
     await store.wipeServer(serverId)
 
     expect(await store.get(serverId, 'oauth_access')).toBeUndefined()
+  })
+
+  it('wipes credential-backed secrets after recreating the store', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'mcp-secrets-'))
+    const filePath = join(directory, 'secrets.yaml')
+    const values = new Map<string, string>()
+    const credentials = {
+      async resolve(ref: string) {
+        const value = values.get(ref)
+        return value === undefined ? undefined : { value }
+      },
+      async describe(ref: string) {
+        return { configured: values.has(ref) }
+      },
+      async set(ref: string, value: string) {
+        values.set(ref, value)
+      },
+      async unset(ref: string) {
+        values.delete(ref)
+      },
+    }
+    const first = createSecretStore({ credentials, filePath })
+    await first.set(serverId, 'oauth_access', 'access-token')
+
+    const second = createSecretStore({ credentials, filePath })
+    await second.wipeServer(serverId)
+
+    await expect(second.describe(serverId, 'oauth_access')).resolves.toEqual({ configured: false })
   })
 })
