@@ -1,0 +1,239 @@
+/**
+ * Secret storage for managed MCP servers.
+ * @module @deepseek-ai/dsh-mcp-mgmt-manager/secrets
+ */
+
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
+
+/** The resolved value returned by the harness credential provider. */
+export interface ResolvedCredential {
+  /** The secret value. */
+  value: string
+}
+
+/** Minimal harness credential service consumed by the secret store. */
+export interface CredentialsApi {
+  /**
+   * Resolves a credential reference.
+   *
+   * @param ref - The credential reference to resolve.
+   * @returns The resolved credential, or `undefined` when it is not configured.
+   */
+  resolve(ref: string): Promise<ResolvedCredential | undefined>
+  /**
+   * Describes a credential reference without exposing its value.
+   *
+   * @param ref - The credential reference to describe.
+   * @returns Its configured state.
+   */
+  describe(ref: string): Promise<{ configured: boolean }>
+  /**
+   * Stores a credential value.
+   *
+   * @param ref - The credential reference to update.
+   * @param value - The secret value to store.
+   */
+  set(ref: string, value: string): Promise<void>
+  /**
+   * Removes a credential value.
+   *
+   * @param ref - The credential reference to remove.
+   */
+  unset(ref: string): Promise<void>
+}
+
+/** A value-free view of one secret's configured state. */
+export interface SecretDescription {
+  /** Whether a value is configured for the requested key. */
+  configured: boolean
+}
+
+/** Operations for secrets owned by managed MCP servers. */
+export interface SecretStore {
+  /**
+   * Stores a server secret.
+   *
+   * @param id - The MCP server id.
+   * @param key - The logical secret key.
+   * @param value - The secret value.
+   */
+  set(id: string, key: string, value: string): Promise<void>
+  /**
+   * Resolves a server secret.
+   *
+   * @param id - The MCP server id.
+   * @param key - The logical secret key.
+   * @returns The configured secret value, if any.
+   */
+  get(id: string, key: string): Promise<string | undefined>
+  /**
+   * Removes one server secret.
+   *
+   * @param id - The MCP server id.
+   * @param key - The logical secret key.
+   */
+  unset(id: string, key: string): Promise<void>
+  /**
+   * Describes one secret without exposing its value.
+   *
+   * @param id - The MCP server id.
+   * @param key - The logical secret key.
+   * @returns Whether the secret is configured.
+   */
+  describe(id: string, key: string): Promise<SecretDescription>
+  /**
+   * Removes all secrets belonging to one server.
+   *
+   * @param id - The MCP server id.
+   */
+  wipeServer(id: string): Promise<void>
+}
+
+/** Dependencies used to create a secret store. */
+export interface SecretStoreOptions {
+  /** Harness credential service, preferred over file storage when available. */
+  credentials?: CredentialsApi
+  /** Fallback file that holds logical credential references and their values. */
+  filePath: string
+}
+
+/**
+ * Creates a secret store backed by the credential service or a private fallback file.
+ *
+ * @param options - The credential service and fallback file location.
+ * @returns A server-scoped secret store.
+ */
+export function createSecretStore(options: SecretStoreOptions): SecretStore {
+  const { credentials, filePath } = options
+
+  if (credentials !== undefined) {
+    const serverRefs = new Map<string, Set<string>>()
+    return {
+      async set(id, key, value) {
+        const ref = secretReference(id, key)
+        await credentials.set(ref, value)
+        const refs = serverRefs.get(id) ?? new Set<string>()
+        refs.add(ref)
+        serverRefs.set(id, refs)
+      },
+      async get(id, key) {
+        return (await credentials.resolve(secretReference(id, key)))?.value
+      },
+      async unset(id, key) {
+        const ref = secretReference(id, key)
+        await credentials.unset(ref)
+        const refs = serverRefs.get(id)
+        refs?.delete(ref)
+        if (refs?.size === 0) serverRefs.delete(id)
+      },
+      async describe(id, key) {
+        const { configured } = await credentials.describe(secretReference(id, key))
+        return { configured }
+      },
+      async wipeServer(id) {
+        const refs = serverRefs.get(id)
+        if (refs === undefined) return
+        await Promise.all([...refs].map((ref) => credentials.unset(ref)))
+        serverRefs.delete(id)
+      },
+    }
+  }
+
+  return {
+    async set(id, key, value) {
+      const values = await loadFallbackFile(filePath)
+      values[secretReference(id, key)] = value
+      await saveFallbackFile(filePath, values)
+    },
+    async get(id, key) {
+      return (await loadFallbackFile(filePath))[secretReference(id, key)]
+    },
+    async unset(id, key) {
+      const values = await loadFallbackFile(filePath)
+      delete values[secretReference(id, key)]
+      await saveFallbackFile(filePath, values)
+    },
+    async describe(id, key) {
+      const value = (await loadFallbackFile(filePath))[secretReference(id, key)]
+      return { configured: value !== undefined }
+    },
+    async wipeServer(id) {
+      const values = await loadFallbackFile(filePath)
+      const prefix = secretReferencePrefix(id)
+      for (const ref of Object.keys(values)) {
+        if (ref.startsWith(prefix)) delete values[ref]
+      }
+      await saveFallbackFile(filePath, values)
+    },
+  }
+}
+
+/**
+ * Converts a server id and logical key into its credential reference.
+ *
+ * @param id - The MCP server id.
+ * @param key - The logical secret key.
+ * @returns A stable credential reference.
+ */
+function secretReference(id: string, key: string): string {
+  return `${secretReferencePrefix(id)}${key.toUpperCase()}`
+}
+
+/**
+ * Returns the credential-reference prefix for one server.
+ *
+ * @param id - The MCP server id.
+ * @returns The prefix shared by every server secret.
+ */
+function secretReferencePrefix(id: string): string {
+  return `MCP_${id.replaceAll('-', '').toUpperCase()}_`
+}
+
+/**
+ * Loads fallback values from a JSON document, which is valid YAML content.
+ *
+ * @param filePath - The fallback file path.
+ * @returns The credential references and values.
+ */
+async function loadFallbackFile(filePath: string): Promise<Record<string, string>> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(filePath, 'utf8'))
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new TypeError(`Secret file ${filePath} must contain an object`)
+    }
+    if (Object.values(parsed).some((value) => typeof value !== 'string')) {
+      throw new TypeError(`Secret file ${filePath} must contain string values`)
+    }
+    return parsed as Record<string, string>
+  } catch (error: unknown) {
+    if (isMissingFileError(error)) return {}
+    throw error
+  }
+}
+
+/**
+ * Stores fallback values with owner-only file permissions where supported.
+ *
+ * @param filePath - The fallback file path.
+ * @param values - The credential references and values to store.
+ */
+async function saveFallbackFile(filePath: string, values: Record<string, string>): Promise<void> {
+  await mkdir(dirname(filePath), { recursive: true })
+  await writeFile(filePath, JSON.stringify(values), { encoding: 'utf8', mode: 0o600 })
+  try {
+    await chmod(filePath, 0o600)
+  } catch {
+    // Windows and some file systems do not support POSIX permissions.
+  }
+}
+
+/**
+ * Checks whether a file-system operation failed because a file was absent.
+ *
+ * @param error - The thrown file-system error.
+ * @returns Whether the error reports an absent file.
+ */
+function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT'
+}
