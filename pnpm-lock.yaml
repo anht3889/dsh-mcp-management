@@ -15,6 +15,12 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(vite@8.2.1)
 
+  packages/mcp:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: link:/Users/anhtra/workspace/deepseek-harness/vendor/cordis
+        version: link:../../../../../deepseek-harness/vendor/cordis
+
 packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
