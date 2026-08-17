@@ -18,13 +18,13 @@ importers:
   packages/bundle:
     dependencies:
       '@deepseek-ai/dsh-home-paths':
-        specifier: ^0.1.0-rc.6
+        specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(@deepseek-ai/cordis@deepseek-harness+vendor+cordis)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@deepseek-harness+vendor+cordis))
       '@deepseek-ai/dsh-mcp-mgmt-mcp':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../mcp
       '@deepseek-ai/dsh-mcp-mgmt-oauth':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../mcp-oauth
       '@deepseek-ai/schemastery':
         specifier: ^3.18.1
@@ -55,7 +55,7 @@ importers:
         specifier: link:../../../deepseek-harness/packages/host/webserver
         version: link:../../../deepseek-harness/packages/host/webserver
       '@deepseek-ai/dsh-invariants':
-        specifier: ^0.1.0-rc.6
+        specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(@deepseek-ai/cordis@deepseek-harness+vendor+cordis)
       '@deepseek-ai/dsh-tools':
         specifier: link:../../../deepseek-harness/packages/core/tools

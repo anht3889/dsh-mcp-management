@@ -7,7 +7,13 @@ Architecture and scope live in [docs/design.md](docs/design.md).
 
 ## Install
 
-Nothing is published to npm yet. Install the bundle by path from this repository root:
+From npm (after the packages are published):
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add @deepseek-ai/dsh-mcp-mgmt-bundle@0.0.1-rc.1
+```
+
+From a local checkout (development):
 
 ```sh
 pnpm install && pnpm run build
