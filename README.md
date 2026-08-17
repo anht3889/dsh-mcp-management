@@ -12,7 +12,7 @@ See [`packages/bundle/README.md`](packages/bundle/README.md) to install `@deepse
 
 ## Development checkout layout
 
-The workspace dependencies link to a sibling `deepseek-harness` checkout. The checked-in paths work from this worktree at `dsh-mcp-management/.worktrees/mcp-management` when both repositories are direct children of the same directory:
+The workspace dependencies link to a sibling `deepseek-harness` checkout. Checked-in relative paths assume both repositories are direct children of the same directory:
 
 ```text
 workspace/

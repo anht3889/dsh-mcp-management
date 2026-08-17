@@ -30,6 +30,6 @@
     "@deepseek-ai/cordis": "*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "link:../../../../../deepseek-harness/vendor/cordis"
+    "@deepseek-ai/cordis": "link:../../../deepseek-harness/vendor/cordis"
   }
 }

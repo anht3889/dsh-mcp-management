@@ -22,19 +22,19 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-home-paths": "link:../../../../../deepseek-harness/packages/util/home-paths",
-    "@deepseek-ai/dsh-host-webserver": "link:../../../../../deepseek-harness/packages/host/webserver",
+    "@deepseek-ai/dsh-home-paths": "link:../../../deepseek-harness/packages/util/home-paths",
+    "@deepseek-ai/dsh-host-webserver": "link:../../../deepseek-harness/packages/host/webserver",
     "@deepseek-ai/dsh-mcp-mgmt-mcp": "workspace:*",
     "@deepseek-ai/dsh-mcp-mgmt-oauth": "workspace:*",
-    "@deepseek-ai/dsh-tools": "link:../../../../../deepseek-harness/packages/core/tools",
-    "@deepseek-ai/schemastery": "link:../../../../../deepseek-harness/vendor/schemastery",
+    "@deepseek-ai/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
+    "@deepseek-ai/schemastery": "link:../../../deepseek-harness/vendor/schemastery",
     "@modelcontextprotocol/sdk": "^1.12.0"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "link:../../../../../deepseek-harness/vendor/cordis",
+    "@deepseek-ai/cordis": "link:../../../deepseek-harness/vendor/cordis",
     "@types/node": "^26.2.0"
   }
 }

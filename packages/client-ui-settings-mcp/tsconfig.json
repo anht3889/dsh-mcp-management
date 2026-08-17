@@ -1,5 +1,5 @@
 {
-  "extends": "../../../../../deepseek-harness/tsconfig.base.client.json",
+  "extends": "../../../deepseek-harness/tsconfig.base.client.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/types"
@@ -9,25 +9,25 @@
   ],
   "references": [
     {
-      "path": "../../../../../deepseek-harness/vendor/cordis"
+      "path": "../../../deepseek-harness/vendor/cordis"
     },
     {
-      "path": "../../../../../deepseek-harness/packages/client/runtime"
+      "path": "../../../deepseek-harness/packages/client/runtime"
     },
     {
-      "path": "../../../../../deepseek-harness/packages/client/ui-slots"
+      "path": "../../../deepseek-harness/packages/client/ui-slots"
     },
     {
-      "path": "../../../../../deepseek-harness/packages/client/ui-settings"
+      "path": "../../../deepseek-harness/packages/client/ui-settings"
     },
     {
-      "path": "../../../../../deepseek-harness/packages/client/locale"
+      "path": "../../../deepseek-harness/packages/client/locale"
     },
     {
-      "path": "../../../../../deepseek-harness/packages/client/web-react"
+      "path": "../../../deepseek-harness/packages/client/web-react"
     },
     {
-      "path": "../../../../../deepseek-harness/packages/runtime-diagnostics/invariants"
+      "path": "../../../deepseek-harness/packages/runtime-diagnostics/invariants"
     }
   ]
 }
