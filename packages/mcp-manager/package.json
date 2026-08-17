@@ -1,0 +1,26 @@
+{
+  "name": "@deepseek-ai/dsh-mcp-mgmt-manager",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/catalog.js",
+  "types": "lib/types/catalog.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/catalog.d.ts",
+      "default": "./lib/catalog.js"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-mcp-mgmt-mcp": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0"
+  }
+}
