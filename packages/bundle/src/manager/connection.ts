@@ -49,6 +49,25 @@ export interface ConnectionHandle {
 }
 
 /**
+ * Renders a connection failure with the causes that carry its reason. Node
+ * reports a TLS or DNS failure as `TypeError: fetch failed` and puts the
+ * diagnosis in `cause`, which an operator needs to fix the server.
+ *
+ * @param error - The rejection to describe.
+ * @returns The error and up to three nested causes, most general first.
+ */
+function describeError(error: unknown): string {
+  const messages = [String(error)]
+  let cause: unknown = error instanceof Error ? error.cause : undefined
+  // Bounded so a cause cycle cannot spin and a status stays readable.
+  while (cause !== undefined && messages.length < 4) {
+    messages.push(String(cause))
+    cause = cause instanceof Error ? cause.cause : undefined
+  }
+  return messages.join(': ')
+}
+
+/**
  * Connects to an MCP server, registers its tools, and reconnects after loss.
  *
  * @param record - The durable MCP server configuration.
@@ -96,9 +115,14 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
       { name: 'dsh-mcp-manager', version: '0.0.0' },
       { capabilities: {} },
     )
+    let establishing = true
     client = nextClient
     nextClient.onclose = () => {
-      if (stopped || generation !== currentGeneration) return
+      // A client that fails to initialize closes itself before `connect`
+      // rejects, so treating that close as a lost connection would hide the
+      // error and retry forever at the initial delay. The catch below owns
+      // every failure up to the first successful tool registration.
+      if (stopped || establishing || generation !== currentGeneration) return
       generation += 1
       client = undefined
       connectedAt = undefined
@@ -110,6 +134,7 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
       await nextClient.connect(buildTransport())
       if (stopped || generation !== currentGeneration) return
       await registerTools(nextClient)
+      establishing = false
       reconnectFailures = 0
       connectedAt = new Date().toISOString()
       setStatus({ state: 'connected', toolCount: disposers.size, connectedAt })
@@ -135,8 +160,8 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
         setStatus({ state: 'disconnected' })
         log('warn', `Disconnected from MCP server "${record.serverName}"`)
       } else {
-        setStatus({ state: 'failed', error: String(error), at })
-        log('error', `Connection to MCP server "${record.serverName}" failed`, String(error))
+        setStatus({ state: 'failed', error: describeError(error), at })
+        log('error', `Connection to MCP server "${record.serverName}" failed`, describeError(error))
       }
       return
     }
@@ -145,8 +170,8 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
     if (reconnectFailures >= record.reconnect.maxAttempts) {
       const at = new Date().toISOString()
       disposeTools()
-      setStatus({ state: 'failed', error: String(error ?? 'Connection closed'), at })
-      log('error', `MCP server "${record.serverName}" failed after ${reconnectFailures} attempts`, error === undefined ? undefined : String(error))
+      setStatus({ state: 'failed', error: error === undefined ? 'Connection closed' : describeError(error), at })
+      log('error', `MCP server "${record.serverName}" failed after ${reconnectFailures} attempts`, error === undefined ? undefined : describeError(error))
       return
     }
 
@@ -172,7 +197,7 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
       try {
         await registerTools(current)
       } catch (error) {
-        log('error', `Failed to re-list tools for MCP server "${record.serverName}"`, String(error))
+        log('error', `Failed to re-list tools for MCP server "${record.serverName}"`, describeError(error))
         try {
           await current.close()
         } catch {

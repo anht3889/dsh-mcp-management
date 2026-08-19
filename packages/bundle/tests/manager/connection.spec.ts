@@ -1,7 +1,7 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { describe, expect, it, vi } from 'vitest'
 import { asMcpServerId } from '@anht3889/dsh-mcp-mgmt-mcp/brand'
-import type { McpConnectionStatus, McpServerRecord, McpToolInfo } from '@anht3889/dsh-mcp-mgmt-mcp/types'
+import type { McpConnectionStatus, McpLogEntry, McpServerRecord, McpToolInfo } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 import { startConnection } from '../../src/manager/connection.ts'
 
 describe('startConnection', () => {
@@ -66,6 +66,40 @@ describe('startConnection', () => {
     })
 
     expect(firstRegistration).toHaveBeenCalledOnce()
+  })
+
+  it('reports the connect error when the failed handshake also closes the client', async () => {
+    const statuses: McpConnectionStatus[] = []
+    const logs: McpLogEntry[] = []
+    const delays: number[] = []
+
+    startConnection(record({ reconnect: { enabled: true, initialDelayMs: 1, maxDelayMs: 2, maxAttempts: 1 } }), {
+      ctx: emptyToolContext(),
+      disabledTools: [],
+      createTransport: () => new ClosingFailingTransport(),
+      // Parking the loop past its retry budget keeps a supervisor that never
+      // gives up from starving this test's timers instead of failing it.
+      delay: async (milliseconds) => {
+        delays.push(milliseconds)
+        if (delays.length > 2) await new Promise<void>(() => {})
+      },
+      onStatus: (status) => { statuses.push(status) },
+      onTools: vi.fn(),
+      onLog: (entry) => { logs.push(entry) },
+    })
+
+    await vi.waitFor(() => {
+      expect(statuses.at(-1)).toMatchObject({ state: 'failed' })
+    })
+
+    expect(statuses.at(-1)).toMatchObject({
+      state: 'failed',
+      error: expect.stringContaining('server unavailable'),
+    })
+    // The reason a `fetch` rejection carries lives in its cause, so a status
+    // without it cannot tell a TLS failure from an unreachable host.
+    expect(statuses.at(-1)).toMatchObject({ error: expect.stringContaining('untrusted certificate') })
+    expect(logs.filter((entry) => entry.level === 'error' && entry.detail?.includes('untrusted certificate'))).not.toHaveLength(0)
   })
 
   it('applies a new tool selection on the transport it is already connected to', async () => {
@@ -198,4 +232,23 @@ class FailingTransport implements Transport {
   }
 
   async close(): Promise<void> {}
+}
+
+/**
+ * Fails the initialize request the way an unreachable HTTP endpoint does. The
+ * client closes a client whose initialization failed, and that close reports
+ * `onclose` before `Client.connect` rejects.
+ */
+class ClosingFailingTransport implements Transport {
+  onclose?: () => void
+
+  async start(): Promise<void> {}
+
+  async send(): Promise<void> {
+    throw new Error('server unavailable', { cause: new Error('untrusted certificate') })
+  }
+
+  async close(): Promise<void> {
+    this.onclose?.()
+  }
 }

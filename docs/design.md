@@ -131,6 +131,8 @@ type McpConnectionStatus =
   | { state: 'failed'; error: string; at: string }
 ```
 
+Everything that goes wrong before a connection's first successful tool registration counts as a failed attempt, never as a lost connection: the MCP client closes a client whose initialization failed, and crediting that close to a live connection would hide the error and retry at the initial delay without ever spending the reconnect budget. `error` carries the rejection's nested causes, because Node reports a TLS or DNS failure as `TypeError: fetch failed` and names the reason only in `cause`.
+
 ### Logs
 
 Per-server ring buffer (v1: last 500 entries): `{ at, level: 'info' | 'warn' | 'error', message, detail? }`. Not durable across process restart.
