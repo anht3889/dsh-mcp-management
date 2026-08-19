@@ -1,7 +1,16 @@
 {
   "name": "@anht3889/dsh-mcp-mgmt-oauth",
   "description": "OAuth PKCE and discovery helpers for managed MCP HTTP servers",
-  "version": "0.0.1-rc.1",
+  "version": "0.0.1",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "oauth",
+    "pkce",
+    "deepseek",
+    "deepseek-harness",
+    "dsh"
+  ],
   "publishConfig": {
     "access": "public"
   },

@@ -12,6 +12,7 @@ import type {
   McpRuntime,
   McpServerId,
   McpServerRecord,
+  McpToolInfo,
 } from '@anht3889/dsh-mcp-mgmt-mcp'
 import { OAUTH_REDIRECT_PATH, OAuthSecretKey, createOAuthController, discoverOAuthFromServerUrl, type DiscoveredOAuthConfig, type OAuthCallbackQuery, type OAuthController } from '@anht3889/dsh-mcp-mgmt-oauth'
 import { loadCatalog, saveCatalog, validateRecord } from './catalog.ts'
@@ -47,6 +48,8 @@ export class McpManagerRuntime implements McpRuntime {
   private readonly statuses = new Map<McpServerId, McpConnectionStatus>()
   private readonly logs = new Map<McpServerId, LogBuffer>()
   private readonly connections = new Map<McpServerId, ConnectionHandle>()
+  /** Tools each server listed most recently, without their selection state. */
+  private readonly listedTools = new Map<McpServerId, { name: string; description: string }[]>()
   private readonly secrets: SecretStore
   private readonly oauth: OAuthController
   private readonly oauthRedirectOrigin: () => string
@@ -112,6 +115,9 @@ export class McpManagerRuntime implements McpRuntime {
     await this.save(next)
     await this.disconnect(record.id)
     this.records.set(record.id, record)
+    // A replaced record may address a different server, so its tools are unknown
+    // again until the next connection lists them.
+    this.listedTools.delete(record.id)
     this.statuses.set(record.id, { state: 'disconnected' })
     this.logs.set(record.id, this.logs.get(record.id) ?? createLogBuffer())
     this.notifyCatalogChanged()
@@ -132,6 +138,7 @@ export class McpManagerRuntime implements McpRuntime {
     this.records.delete(id)
     this.statuses.delete(id)
     this.logs.delete(id)
+    this.listedTools.delete(id)
     this.notifyCatalogChanged()
     await this.secrets.wipeServer(id)
   }
@@ -165,8 +172,12 @@ export class McpManagerRuntime implements McpRuntime {
     await this.disconnect(id)
     this.connections.set(id, this.start(record, {
       ctx: this.ctx as unknown as ToolContext,
+      disabledTools: record.disabledTools ?? [],
       resolveHeaders: async () => await this.resolveHeaders(record),
       onStatus: status => { this.statuses.set(id, status) },
+      onTools: tools => {
+        this.listedTools.set(id, tools.map(({ name, description }) => ({ name, description })))
+      },
       onLog: entry => { this.bufferFor(id).append(entry) },
     }))
   }
@@ -197,6 +208,42 @@ export class McpManagerRuntime implements McpRuntime {
    */
   getLogs(id: McpServerId, after?: number): { next: number; entries: McpLogEntry[] } {
     return this.bufferFor(id).read(after)
+  }
+
+  /**
+   * @param id - server identifier.
+   * @returns the tools listed by the most recent successful connection, each
+   *   carrying the selection state the record holds now.
+   */
+  getTools(id: McpServerId): McpToolInfo[] {
+    const disabled = new Set(this.records.get(id)?.disabledTools ?? [])
+    return (this.listedTools.get(id) ?? []).map(tool => ({ ...tool, enabled: !disabled.has(tool.name) }))
+  }
+
+  /**
+   * Persists a tool's selection state and re-registers the live connection's
+   * tools, which keeps its transport and so its stdio process or HTTP session.
+   *
+   * @param id - server identifier.
+   * @param toolName - tool name as the server lists it.
+   * @param enabled - whether the harness registry exposes the tool.
+   */
+  async setToolEnabled(id: McpServerId, toolName: string, enabled: boolean): Promise<void> {
+    const record = this.requireRecord(id)
+    const disabled = new Set(record.disabledTools ?? [])
+    if (enabled) disabled.delete(toolName)
+    else disabled.add(toolName)
+    const disabledTools = [...disabled]
+    const nextRecord: McpServerRecord = {
+      ...record,
+      disabledTools,
+      updatedAt: new Date().toISOString(),
+    }
+    const next = new Map(this.records)
+    next.set(id, nextRecord)
+    await this.save(next)
+    this.records.set(id, nextRecord)
+    await this.connections.get(id)?.applyToolSelection(disabledTools)
   }
 
   /**

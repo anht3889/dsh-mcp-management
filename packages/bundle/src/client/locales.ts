@@ -6,7 +6,13 @@ export type McpSettingsKey =
   | 'add'
   | 'edit'
   | 'delete'
-  | 'logs'
+  | 'done'
+  | 'reload'
+  | 'logout'
+  | 'tools'
+  | 'toolsEnabled'
+  | 'toolsNone'
+  | 'toolsUnlisted'
   | 'authorize'
   | 'authorizeStarting'
   | 'authorizeWaiting'
@@ -17,7 +23,6 @@ export type McpSettingsKey =
   | 'empty'
   | 'serverList'
   | 'loading'
-  | 'hideLogs'
   | 'logsPanel'
   | 'noLogs'
   | 'addServer'
@@ -68,9 +73,15 @@ export const zh: Record<McpSettingsKey, string> = {
   title: 'MCP 服务',
   intro: '管理本地 MCP 服务连接、授权和诊断日志。',
   add: '添加服务',
-  edit: '编辑',
+  edit: '编辑配置',
   delete: '删除',
-  logs: '日志',
+  done: '完成',
+  reload: '重新加载',
+  logout: '退出登录',
+  tools: '工具',
+  toolsEnabled: '个工具已启用',
+  toolsNone: '该服务未提供工具',
+  toolsUnlisted: '连接成功后显示工具列表',
   authorize: '授权',
   authorizeStarting: '正在打开登录窗口…',
   authorizeWaiting: '请在登录窗口中完成授权。',
@@ -81,7 +92,6 @@ export const zh: Record<McpSettingsKey, string> = {
   empty: '尚未配置 MCP 服务。',
   serverList: 'MCP 服务列表',
   loading: '正在加载 MCP 服务…',
-  hideLogs: '隐藏日志',
   logsPanel: '连接日志',
   noLogs: '暂无日志。',
   addServer: '添加 MCP 服务',
@@ -133,9 +143,15 @@ export const en: Record<McpSettingsKey, string> = {
   title: 'MCP Servers',
   intro: 'Manage local MCP connections, authorization, and diagnostic logs.',
   add: 'Add server',
-  edit: 'Edit',
+  edit: 'Edit configuration',
   delete: 'Delete',
-  logs: 'Logs',
+  done: 'Done',
+  reload: 'Reload',
+  logout: 'Log out',
+  tools: 'Tools',
+  toolsEnabled: 'tools enabled',
+  toolsNone: 'This server exposes no tools',
+  toolsUnlisted: 'Tools are listed after the server connects',
   authorize: 'Authorize',
   authorizeStarting: 'Opening the login window…',
   authorizeWaiting: 'Finish signing in the login window.',
@@ -146,7 +162,6 @@ export const en: Record<McpSettingsKey, string> = {
   empty: 'No MCP servers are configured.',
   serverList: 'MCP server list',
   loading: 'Loading MCP servers…',
-  hideLogs: 'Hide logs',
   logsPanel: 'Connection logs',
   noLogs: 'No logs yet.',
   addServer: 'Add MCP server',

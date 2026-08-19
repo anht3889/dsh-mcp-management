@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { McpAuthConfig, McpManagementApi, McpServerRecord, McpServerView } from './api.ts'
+import type { McpAuthConfig, McpLogEntry, McpManagementApi, McpServerRecord, McpServerView } from './api.ts'
 import { McpSettingsStore } from './store.ts'
 import type { McpSettingsKey } from './locales.ts'
 import {
@@ -10,6 +10,7 @@ import {
   readOAuthCompletion,
   type OAuthLoginState,
 } from './oauth-login.ts'
+import { Switch } from './Switch.tsx'
 import styles from './McpSection.module.css'
 
 /**
@@ -17,6 +18,13 @@ import styles from './McpSection.module.css'
  * pre-registered public MCP clients most often allow.
  */
 const DEFAULT_REDIRECT_PATH = '/callback'
+
+/**
+ * Secret the Host reports for a stored OAuth access token, which is how a
+ * browser client tells an authorized server from one awaiting its first login.
+ * The manager owns the name; this module restates it like the wire types above.
+ */
+const OAUTH_ACCESS_SECRET = 'OAUTH_ACCESS'
 
 /** Props supplied while the section loads its managed servers. */
 export interface McpSectionProps {
@@ -32,7 +40,12 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
   const [state, setState] = useState(store.getSnapshot())
   const [editing, setEditing] = useState<McpServerRecord | undefined>(undefined)
   const [pendingDelete, setPendingDelete] = useState<McpServerRecord | undefined>(undefined)
+  const [detailsId, setDetailsId] = useState<string | undefined>(undefined)
+  const [actionError, setActionError] = useState<string | undefined>(undefined)
   const [login, setLogin] = useState<{ id: string; state: OAuthLoginState } | undefined>(undefined)
+  // Read from the polled snapshot so the open dialog follows live status, tool
+  // listings, and a deletion that removes the server underneath it.
+  const details = state.servers.find(server => server.record.id === detailsId)
 
   useEffect(() => {
     const dispose = store.subscribe(() => { setState(store.getSnapshot()) })
@@ -83,10 +96,26 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
     await store.load()
   }
 
-  const remove = async (record: McpServerRecord): Promise<void> => {
+  /** Applies a Host request, then refreshes so the UI shows the outcome. */
+  const run = (request: Promise<unknown>): void => {
+    setActionError(undefined)
+    void request.then(
+      () => store.load(),
+      (error: unknown) => {
+        setActionError(error instanceof Error ? error.message : String(error))
+        void store.load()
+      },
+    )
+  }
+
+  const closeDetails = (): void => {
+    setDetailsId(undefined)
+    store.select(undefined)
+  }
+
+  const remove = (record: McpServerRecord): void => {
     setPendingDelete(undefined)
-    await api.remove(record.id)
-    await store.load()
+    run(api.remove(record.id))
   }
 
   return (
@@ -96,30 +125,47 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
           <h2 className={styles.title}>{t('title')}</h2>
           <p className={styles.intro}>{t('intro')}</p>
         </div>
-        <button type="button" className={styles.primaryButton} onClick={() => { setEditing(newServer()) }}>{t('add')}</button>
+        <Button variant="primary" onClick={() => { setEditing(newServer()) }}>{t('add')}</Button>
       </header>
       {state.error === undefined ? null : <p className={styles.error} role="alert">{state.error}</p>}
-      <div className={styles.content}>
-        <div className={styles.list} aria-label={t('serverList')}>
-          {state.servers.map((server) => (
-            <ServerRow
-              key={server.record.id}
-              server={server}
-              selected={state.selectedId === server.record.id}
-              login={login?.id === server.record.id ? login.state : undefined}
-              t={t}
-              onEdit={() => { setEditing(server.record) }}
-              onLogs={() => { store.select(state.selectedId === server.record.id ? undefined : server.record.id) }}
-              onToggle={() => { void api.setEnabled(server.record.id, !server.record.enabled).then(() => store.load()) }}
-              onAuthorize={() => { authorize(server.record.id) }}
-              onDelete={() => { setPendingDelete(server.record) }}
-            />
-          ))}
-          {state.status === 'loading' && state.servers.length === 0 ? <p>{t('loading')}</p> : null}
-          {state.status === 'ready' && state.servers.length === 0 ? <p>{t('empty')}</p> : null}
-        </div>
-        {state.selectedId === undefined ? null : <LogsPanel entries={state.logs} t={t} />}
+      {actionError === undefined ? null : <p className={styles.error} role="alert">{actionError}</p>}
+      <div className={styles.list} aria-label={t('serverList')}>
+        {state.servers.map((server) => (
+          <ServerRow
+            key={server.record.id}
+            server={server}
+            login={login?.id === server.record.id ? login.state : undefined}
+            t={t}
+            onOpen={() => { setDetailsId(server.record.id) }}
+            onToggle={() => { run(api.setEnabled(server.record.id, !server.record.enabled)) }}
+            onAuthorize={() => { authorize(server.record.id) }}
+          />
+        ))}
+        {state.status === 'loading' && state.servers.length === 0 ? <p>{t('loading')}</p> : null}
+        {state.status === 'ready' && state.servers.length === 0 ? <p>{t('empty')}</p> : null}
       </div>
+      {details === undefined ? null : (
+        <ServerDetails
+          server={details}
+          logs={state.logs}
+          logsVisible={state.selectedId === details.record.id}
+          t={t}
+          onClose={closeDetails}
+          onToggleEnabled={enabled => { run(api.setEnabled(details.record.id, enabled)) }}
+          onToggleTool={(toolName, enabled) => { run(api.setToolEnabled(details.record.id, toolName, enabled)) }}
+          onReload={() => { run(api.reload(details.record.id)) }}
+          onShowLogs={visible => { store.select(visible ? details.record.id : undefined) }}
+          onEdit={() => {
+            closeDetails()
+            setEditing(details.record)
+          }}
+          onLogout={() => { run(api.clearOAuth(details.record.id)) }}
+          onDelete={() => {
+            closeDetails()
+            setPendingDelete(details.record)
+          }}
+        />
+      )}
       {editing === undefined ? null : (
         <Editor
           api={api}
@@ -140,7 +186,7 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
             <Button variant="outline" onClick={() => { setPendingDelete(undefined) }}>{t('cancel')}</Button>
             <Button
               variant="primary"
-              onClick={() => { if (pendingDelete !== undefined) void remove(pendingDelete) }}
+              onClick={() => { if (pendingDelete !== undefined) remove(pendingDelete) }}
             >
               {t('delete')}
             </Button>
@@ -155,47 +201,123 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
 
 function ServerRow({
   server,
-  selected,
   login,
   t,
-  onEdit,
-  onLogs,
+  onOpen,
   onToggle,
   onAuthorize,
-  onDelete,
 }: {
   server: McpServerView
-  selected: boolean
   login: OAuthLoginState | undefined
   t: (key: McpSettingsKey) => string
-  onEdit: () => void
-  onLogs: () => void
+  onOpen: () => void
   onToggle: () => void
   onAuthorize: () => void
-  onDelete: () => void
 }): ReactNode {
   const { record, status } = server
   return (
     <article className={styles.server}>
-      <div className={styles.serverSummary}>
-        <strong>{record.serverName}</strong>
-        <span>{record.transport === 'stdio' ? t('transportStdio') : t('transportHttp')}</span>
-        <span>{statusLabel(t, status.state)}</span>
-      </div>
-      <div className={styles.actions}>
-        <label className={styles.toggle}>
-          <input type="checkbox" checked={record.enabled} onChange={onToggle} />
-          {t('enabled')}
-        </label>
-        <button type="button" className={styles.secondaryButton} onClick={onEdit}>{t('edit')}</button>
-        <button type="button" className={styles.secondaryButton} onClick={onDelete}>{t('delete')}</button>
-        <button type="button" className={styles.secondaryButton} onClick={onLogs}>{selected ? t('hideLogs') : t('logs')}</button>
-        {record.auth.kind === 'oauth'
-          ? <button type="button" className={styles.secondaryButton} onClick={onAuthorize}>{t('authorize')}</button>
+      {/* Everything except the switch and Authorize opens the details dialog,
+          which is where this server's tools, logs, and destructive actions live. */}
+      <button type="button" className={styles.serverOpen} aria-haspopup="dialog" onClick={onOpen}>
+        <span className={styles.serverName}>{record.serverName}</span>
+        <span className={styles.serverMeta}>
+          {`${transportLabel(t, record)} · ${statusLabel(t, status.state)} · ${toolSummary(t, server)}`}
+        </span>
+      </button>
+      <div className={styles.serverControls}>
+        <Switch checked={record.enabled} label={t('enabled')} onChange={onToggle} />
+        {needsAuthorization(server)
+          ? <Button variant="outline" size="sm" onClick={onAuthorize}>{t('authorize')}</Button>
           : null}
       </div>
       {login === undefined ? null : <LoginStatus login={login} t={t} />}
     </article>
+  )
+}
+
+function ServerDetails({
+  server,
+  logs,
+  logsVisible,
+  t,
+  onClose,
+  onToggleEnabled,
+  onToggleTool,
+  onReload,
+  onShowLogs,
+  onEdit,
+  onLogout,
+  onDelete,
+}: {
+  server: McpServerView
+  logs: readonly McpLogEntry[]
+  logsVisible: boolean
+  t: (key: McpSettingsKey) => string
+  onClose: () => void
+  onToggleEnabled: (enabled: boolean) => void
+  onToggleTool: (toolName: string, enabled: boolean) => void
+  onReload: () => void
+  onShowLogs: (visible: boolean) => void
+  onEdit: () => void
+  onLogout: () => void
+  onDelete: () => void
+}): ReactNode {
+  const { record, status, tools } = server
+  return (
+    <Modal open onClose={onClose} title={record.serverName} headless className={styles.detailsDialog as string}>
+      <div className={styles.details}>
+        <header className={styles.detailsHeader}>
+          <div>
+            <h3 className={styles.detailsTitle}>{record.serverName}</h3>
+            <p className={styles.detailsMeta}>{`${transportLabel(t, record)} · ${statusLabel(t, status.state)}`}</p>
+          </div>
+          <Switch checked={record.enabled} label={t('enabled')} onChange={onToggleEnabled} />
+        </header>
+        <div className={styles.detailsBody}>
+          <section aria-label={t('tools')}>
+            <div className={styles.toolsHeader}>
+              <h4 className={styles.detailsSubtitle}>{`${t('tools')} · ${toolSummary(t, server)}`}</h4>
+              <Button variant="outline" size="sm" disabled={!record.enabled} onClick={onReload}>{t('reload')}</Button>
+            </div>
+            {tools.length === 0
+              ? <p className={styles.detailsMeta}>{t('toolsUnlisted')}</p>
+              : (
+                <ul className={styles.toolList}>
+                  {tools.map(tool => (
+                    <li key={tool.name} className={styles.tool}>
+                      <Switch
+                        checked={tool.enabled}
+                        label={tool.name}
+                        onChange={enabled => { onToggleTool(tool.name, enabled) }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+          </section>
+          <section>
+            <button
+              type="button"
+              className={styles.advancedToggle}
+              aria-expanded={logsVisible}
+              onClick={() => { onShowLogs(!logsVisible) }}
+            >
+              {t('logsPanel')}
+            </button>
+            {logsVisible ? <LogsPanel entries={logs} t={t} /> : null}
+          </section>
+        </div>
+        <footer className={styles.detailsFooter}>
+          <div className={styles.detailsActions}>
+            <Button variant="outline" onClick={onEdit}>{t('edit')}</Button>
+            {isAuthorized(server) ? <Button variant="outline" onClick={onLogout}>{t('logout')}</Button> : null}
+            <Button variant="outline" onClick={onDelete}>{t('delete')}</Button>
+          </div>
+          <Button variant="primary" onClick={onClose}>{t('done')}</Button>
+        </footer>
+      </div>
+    </Modal>
   )
 }
 
@@ -218,7 +340,7 @@ function LoginStatus({ login, t }: { login: OAuthLoginState; t: (key: McpSetting
   }
 }
 
-function LogsPanel({ entries, t }: { entries: readonly { at: string; level: string; message: string; detail?: string }[]; t: (key: McpSettingsKey) => string }): ReactNode {
+function LogsPanel({ entries, t }: { entries: readonly McpLogEntry[]; t: (key: McpSettingsKey) => string }): ReactNode {
   return (
     <aside className={styles.logs} aria-label={t('logsPanel')}>
       <h3>{t('logsPanel')}</h3>
@@ -341,9 +463,9 @@ function Editor({
             <>
               <p className={styles.loginStatus}>{t('discoverOAuthHint')}</p>
               <div className={styles.actions}>
-                <button type="button" className={styles.secondaryButton} disabled={discovering} onClick={discover}>
+                <Button variant="outline" size="sm" disabled={discovering} onClick={discover}>
                   {discovering ? t('discoveringOAuth') : t('discoverOAuth')}
-                </button>
+                </Button>
               </div>
               {discoverError === undefined ? null : <p className={styles.error} role="alert">{discoverError}</p>}
               <label>{t('clientId')}<input value={oauthAuth.clientId} onChange={event => { updateAuth({ ...oauthAuth, clientId: event.target.value }) }} required /></label>
@@ -381,6 +503,27 @@ function Editor({
       </form>
     </Modal>
   )
+}
+
+function transportLabel(t: (key: McpSettingsKey) => string, record: McpServerRecord): string {
+  return record.transport === 'stdio' ? t('transportStdio') : t('transportHttp')
+}
+
+/** One line describing how many of a server's listed tools the model can call. */
+function toolSummary(t: (key: McpSettingsKey) => string, server: McpServerView): string {
+  if (server.tools.length > 0) {
+    return `${server.tools.filter(tool => tool.enabled).length}/${server.tools.length} ${t('toolsEnabled')}`
+  }
+  return server.status.state === 'connected' ? t('toolsNone') : t('toolsUnlisted')
+}
+
+/** Whether the Host holds an OAuth access token for this server. */
+function isAuthorized(server: McpServerView): boolean {
+  return server.secrets[OAUTH_ACCESS_SECRET]?.configured === true
+}
+
+function needsAuthorization(server: McpServerView): boolean {
+  return server.record.auth.kind === 'oauth' && !isAuthorized(server)
 }
 
 function statusLabel(t: (key: McpSettingsKey) => string, status: McpServerView['status']['state']): string {

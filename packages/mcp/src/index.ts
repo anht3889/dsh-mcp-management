@@ -9,6 +9,7 @@ import type {
   McpConnectionStatus,
   McpLogEntry,
   McpServerRecord,
+  McpToolInfo,
 } from './types.ts'
 
 export { asMcpServerId, SERVER_NAME_PATTERN } from './brand.ts'
@@ -18,6 +19,7 @@ export type {
   McpConnectionStatus,
   McpLogEntry,
   McpServerRecord,
+  McpToolInfo,
 } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -78,6 +80,23 @@ export interface McpRuntime {
    * @returns the next log cursor and matching entries.
    */
   getLogs(id: McpServerId, after?: number): { next: number; entries: McpLogEntry[] }
+
+  /**
+   * @param id - the server identifier.
+   * @returns the tools listed by the server's most recent successful
+   *   connection, empty until it connects once.
+   */
+  getTools(id: McpServerId): McpToolInfo[]
+
+  /**
+   * Persists a tool's registration state and applies it to the live
+   * connection, which keeps its transport.
+   *
+   * @param id - the server identifier.
+   * @param toolName - the tool name as the server lists it.
+   * @param enabled - whether the harness registry exposes the tool.
+   */
+  setToolEnabled(id: McpServerId, toolName: string, enabled: boolean): Promise<void>
 
   /**
    * @param id - the OAuth-configured server identifier.

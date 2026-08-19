@@ -1,7 +1,7 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { describe, expect, it, vi } from 'vitest'
 import { asMcpServerId } from '@anht3889/dsh-mcp-mgmt-mcp/brand'
-import type { McpConnectionStatus, McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp/types'
+import type { McpConnectionStatus, McpServerRecord, McpToolInfo } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 import { startConnection } from '../../src/manager/connection.ts'
 
 describe('startConnection', () => {
@@ -13,9 +13,11 @@ describe('startConnection', () => {
 
     startConnection(record(), {
       ctx: emptyToolContext(),
+      disabledTools: [],
       createTransport: transportFactory(first, second),
       delay: async (milliseconds) => { delays.push(milliseconds) },
       onStatus: (status) => { statuses.push(status) },
+      onTools: vi.fn(),
       onLog: vi.fn(),
     })
 
@@ -46,9 +48,11 @@ describe('startConnection', () => {
 
     startConnection(record({ reconnect: { enabled: true, initialDelayMs: 1, maxDelayMs: 2, maxAttempts: 2 } }), {
       ctx: { tools: { register: vi.fn(() => firstRegistration) } },
+      disabledTools: [],
       createTransport: transportFactory(first, new FailingTransport(), new FailingTransport()),
       delay: async () => {},
       onStatus: (status) => { statuses.push(status) },
+      onTools: vi.fn(),
       onLog: vi.fn(),
     })
 
@@ -62,6 +66,45 @@ describe('startConnection', () => {
     })
 
     expect(firstRegistration).toHaveBeenCalledOnce()
+  })
+
+  it('applies a new tool selection on the transport it is already connected to', async () => {
+    const transport = new MockTransport([
+      { name: 'read', inputSchema: { type: 'object' } },
+      { name: 'write', inputSchema: { type: 'object' } },
+    ])
+    const registered: string[] = []
+    const statuses: McpConnectionStatus[] = []
+    const listings: McpToolInfo[][] = []
+
+    const connection = startConnection(record(), {
+      ctx: { tools: { register: (definition: { name: string }) => {
+        registered.push(definition.name)
+        return () => {}
+      } } } as never,
+      disabledTools: [],
+      // A second transport would mean a reconnect, which for stdio restarts the
+      // server process the operator is only reconfiguring.
+      createTransport: transportFactory(transport),
+      delay: async () => {},
+      onStatus: (status) => { statuses.push(status) },
+      onTools: (tools) => { listings.push(tools) },
+      onLog: vi.fn(),
+    })
+
+    await transport.connected
+    await vi.waitFor(() => {
+      expect(statuses.at(-1)).toMatchObject({ state: 'connected', toolCount: 2 })
+    })
+
+    await connection.applyToolSelection(['write'])
+
+    expect(listings.at(-1)).toEqual([
+      { name: 'read', description: '', enabled: true },
+      { name: 'write', description: '', enabled: false },
+    ])
+    expect(registered.filter(name => name.startsWith('mcp__server__write'))).toHaveLength(1)
+    expect(statuses.at(-1)).toMatchObject({ state: 'connected', toolCount: 1 })
   })
 })
 

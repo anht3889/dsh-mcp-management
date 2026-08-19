@@ -25,12 +25,14 @@ describe('syncTools', () => {
     }
     const ctx = { tools: { register } }
 
-    const disposers = await syncTools(ctx as never, client as never, {
+    const { disposers, listed } = await syncTools(ctx as never, client as never, {
       serverName: 'github',
       toolCallTimeoutMs: 60_000,
+      disabledTools: [],
     })
 
     expect([...disposers.keys()]).toEqual([expect.stringMatching(/^mcp__github__create_issue_[0-9a-f]{12}$/)])
+    expect(listed).toEqual([{ name: 'create issue', description: 'Create an issue', enabled: true }])
     const definition = register.mock.calls[0]?.[0]
     expect(definition).toMatchObject({
       description: 'Create an issue',
@@ -66,8 +68,34 @@ describe('syncTools', () => {
     await expect(syncTools({ tools: { register } } as never, client as never, {
       serverName: 'github',
       toolCallTimeoutMs: 60_000,
+      disabledTools: [],
     })).rejects.toThrow('tool name conflict')
 
     expect(dispose).toHaveBeenCalledOnce()
+  })
+
+  it('lists a disabled tool without registering it', async () => {
+    const register = vi.fn(() => () => {})
+    const client = {
+      listTools: vi.fn().mockResolvedValue({
+        tools: [
+          { name: 'read', description: 'Read a file', inputSchema: { type: 'object' } },
+          { name: 'write', inputSchema: { type: 'object' } },
+        ],
+      }),
+    }
+
+    const { disposers, listed } = await syncTools({ tools: { register } } as never, client as never, {
+      serverName: 'files',
+      toolCallTimeoutMs: 60_000,
+      disabledTools: ['write'],
+    })
+
+    expect(register).toHaveBeenCalledOnce()
+    expect([...disposers.keys()]).toEqual([expect.stringMatching(/^mcp__files__read/)])
+    expect(listed).toEqual([
+      { name: 'read', description: 'Read a file', enabled: true },
+      { name: 'write', description: '', enabled: false },
+    ])
   })
 })

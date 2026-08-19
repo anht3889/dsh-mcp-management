@@ -34,7 +34,7 @@ Ship an installable DeepSeek Harness profile bundle that provides first-class MC
 ```text
 ┌─ browser (Settings → MCP) ─────────────────────────────┐
 │  bundle/client  (dsh.client)                           │
-│    list / edit / connect / logs / Authorize            │
+│    list / details / tools / logs / edit / Authorize    │
 └─────────────── HTTP /mcp-management/* ─────────────────┘
                          │
 ┌─ Host (profile bundle) ────────────────────────────────┐
@@ -100,6 +100,7 @@ type McpServerRecord = {
         tokenUrl: string
         scopes: string[]
       }
+  disabledTools?: string[] // raw MCP tool names listed but never registered
   toolCallTimeoutMs: number
   reconnect: {
     enabled: boolean
@@ -134,9 +135,17 @@ type McpConnectionStatus =
 
 Per-server ring buffer (v1: last 500 entries): `{ at, level: 'info' | 'warn' | 'error', message, detail? }`. Not durable across process restart.
 
+### Listed tools (in-memory)
+
+```ts
+type McpToolInfo = { name: string; description: string; enabled: boolean }
+```
+
+Each server keeps the tools its most recent successful connection listed; `enabled` is derived from the record's `disabledTools`. A listing outlives a disconnect so tools can be selected before the server is reachable again, and is dropped when the record is replaced or removed.
+
 ### Service API (`ctx.mcp`)
 
-Operations: `list`, `get`, `upsert`, `remove`, `setEnabled`, `connect`, `disconnect`, `getStatus`, `getLogs`, `startOAuth`, `clearOAuth`, plus secret write helpers used by the HTTP layer.
+Operations: `list`, `get`, `upsert`, `remove`, `setEnabled`, `connect`, `disconnect`, `getStatus`, `getLogs`, `getTools`, `setToolEnabled`, `startOAuth`, `clearOAuth`, plus secret write helpers used by the HTTP layer.
 
 Events (for HTTP bridge / future push): `mcp/changed`, `mcp/status`, `mcp/log`.
 
@@ -171,6 +180,8 @@ Prefix: `/mcp-management` on `ctx` webserver. Loopback-trusted like the rest of 
 | `POST` | `/servers/:id/connect` | Manual connect |
 | `POST` | `/servers/:id/disconnect` | Manual disconnect |
 | `GET` | `/servers/:id/logs?after=` | Ring-buffer poll |
+| `POST` | `/servers/:id/tools/:name/enable` | Register a listed tool |
+| `POST` | `/servers/:id/tools/:name/disable` | Withhold a listed tool (404 for a name the server never listed) |
 | `POST` | `/servers/:id/oauth/start` | Begin OAuth |
 | `POST` | `/servers/:id/oauth/clear` | Clear local tokens |
 | `POST` | `/oauth/discover` | Fill OAuth fields from MCP URL |
@@ -179,16 +190,20 @@ Prefix: `/mcp-management` on `ctx` webserver. Loopback-trusted like the rest of 
 
 ## Tool bridge
 
-On successful connect: `listTools` → register each tool on `ctx.tools` under `mcp__<serverName>__<rawName>` (apply the same 64-char / hash-suffix normalization rules as harness `mcp-client`). Execute calls the MCP server with the **raw** tool name. Disconnect, disable, remove, or exhausted reconnect budget unregisters the generation. Re-sync / reconnect replaces rather than accumulates.
+On successful connect: `listTools` → register each selected tool on `ctx.tools` under `mcp__<serverName>__<rawName>` (apply the same 64-char / hash-suffix normalization rules as harness `mcp-client`). Execute calls the MCP server with the **raw** tool name. Disconnect, disable, remove, or exhausted reconnect budget unregisters the generation. Re-sync / reconnect replaces rather than accumulates.
+
+A tool named in `disabledTools` is reported to the UI but never registered. Changing the selection re-registers over the live transport instead of reconnecting, because a reconnect would restart a stdio server's process; a server that then fails to re-list its tools is closed so the supervisor reconnects, and the error reaches the caller.
 
 ## Settings UI
 
 - Nav section **MCP** via `settings.section`.
-- **List:** serverName, transport, status, enabled toggle, tool count; actions Add / Edit / Logs / Authorize / Delete.
+- **List:** one full-width row per server. The name line carries the Enabled switch; a summary line carries transport, status, and enabled/listed tool counts. Authorize is the only row action, and only while an OAuth server holds no access token. The rest of the row opens the details dialog.
+- **Details dialog:** Enabled switch, one switch per listed tool, Reload (`POST .../connect`), the connection logs behind a disclosure, then Edit configuration, Log out (OAuth servers holding a token), Delete, and Done.
+- **Switch, not checkbox:** every toggle in the list and details dialog applies immediately, so it reads as state rather than a selection staged for a later Save. The editor keeps checkboxes because its draft is applied by Save.
 - **Editor:** a `Modal` dialog from `@deepseek-ai/dsh-client-ui-primitives` (a platform module the web shell shares, so the bundle imports it as an external). stdio vs HTTP fields; auth kind; write-only secret controls; tool timeout and reconnect fields behind an Advanced disclosure; Save → `PUT` (+ connect when enabled). Escape, the mask, and Cancel all discard the draft.
-- **Delete:** a confirmation dialog naming the server; the `DELETE` request is issued only after it is accepted.
-- **Logs:** poll with `?after=`; level filter; clear is UI-local in v1.
-- Poll list/status ~2s while section open; faster on logs view.
+- **Delete:** a confirmation dialog naming the server; the `DELETE` request is issued only after it is accepted. Opening it, or the editor, closes the details dialog rather than stacking dialogs.
+- **Logs:** poll with `?after=` while the disclosure is open; clear is UI-local in v1.
+- Poll list/status ~2s while the section is open, which is also what keeps an open details dialog current.
 - Authorize opens `authorizeUrl` in a new tab; UI polls until connected or failed.
 - Chinese product copy; CSS Modules + `--dsw-*` tokens; no new component library.
 
@@ -221,5 +236,5 @@ On successful connect: `listTools` → register each tool on `ctx.tools` under `
 1. With only this bundle installed (no harness edits), Web Settings shows an MCP section that can CRUD servers and show live status/logs.
 2. Enabled stdio and HTTP servers expose tools to the model under `mcp__…` names.
 3. OAuth HTTP servers can authorize via browser redirect and keep tokens out of `servers.json`.
-4. Disabling or deleting a server removes its tools from `ctx.tools`.
+4. Disabling or deleting a server removes its tools from `ctx.tools`; disabling one tool removes only that tool and survives a restart.
 5. README documents coexistence rule vs stock `mcp-client`.

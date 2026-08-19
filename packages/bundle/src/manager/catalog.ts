@@ -107,6 +107,11 @@ export function validateRecord(
     && (typeof record.auth.redirectPath !== 'string' || !record.auth.redirectPath.startsWith('/'))) {
     throw new Error(`oauth auth requires a redirectPath starting with "/": ${String(record.auth.redirectPath)}`)
   }
+
+  if (record.disabledTools !== undefined
+    && (!Array.isArray(record.disabledTools) || record.disabledTools.some(name => typeof name !== 'string' || name === ''))) {
+    throw new Error('disabledTools must hold non-empty MCP tool names')
+  }
 }
 
 /**
@@ -127,6 +132,7 @@ function toPersistedRecord(record: McpServerRecord): McpServerRecord {
     ...(record.cwd === undefined ? {} : { cwd: record.cwd }),
     ...(record.url === undefined ? {} : { url: record.url }),
     auth: record.auth,
+    ...(record.disabledTools === undefined ? {} : { disabledTools: record.disabledTools }),
     toolCallTimeoutMs: record.toolCallTimeoutMs,
     reconnect: record.reconnect,
     createdAt: record.createdAt,

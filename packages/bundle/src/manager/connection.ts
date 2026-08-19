@@ -5,7 +5,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import type { McpConnectionStatus, McpLogEntry, McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp/types'
+import type { McpConnectionStatus, McpLogEntry, McpServerRecord, McpToolInfo } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 import { syncTools, type ToolContext, type ToolDisposers } from './tools.ts'
 import { createTransport } from './transport.ts'
 
@@ -13,6 +13,11 @@ import { createTransport } from './transport.ts'
 export interface ConnectionHooks {
   /** The tool registry where discovered MCP tools are registered. */
   ctx: ToolContext
+  /**
+   * Raw tool names to list without registering, resolved by the record owner
+   * for the first generation and replaced by `applyToolSelection`.
+   */
+  disabledTools: readonly string[]
   /** Creates a new transport for each connection generation. */
   createTransport?: () => Transport
   /** Resolves HTTP credentials when the default transport factory is used. */
@@ -21,14 +26,26 @@ export interface ConnectionHooks {
   delay?: (milliseconds: number) => Promise<void>
   /** Receives each observable connection state transition. */
   onStatus(status: McpConnectionStatus): void
+  /** Receives every tool the server listed, after each discovery pass. */
+  onTools(tools: McpToolInfo[]): void
   /** Receives lifecycle log entries. */
   onLog(entry: McpLogEntry): void
 }
 
-/** Handle that stops a supervised MCP connection. */
+/** Handle that controls a supervised MCP connection. */
 export interface ConnectionHandle {
   /** Stops future reconnects, closes the client, and unregisters its tools. */
   stop(): Promise<void>
+  /**
+   * Re-registers the server's tools against a new selection, keeping the live
+   * transport. A connection that has not finished connecting adopts the
+   * selection in its pending discovery pass instead.
+   *
+   * @param disabledTools - raw tool names to list without registering.
+   * @throws when the connected server fails to re-list its tools, after
+   *   closing the client so the supervisor reconnects.
+   */
+  applyToolSelection(disabledTools: readonly string[]): Promise<void>
 }
 
 /**
@@ -44,6 +61,8 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
   let disposers: ToolDisposers = new Map()
   let reconnectFailures = 0
   let generation = 0
+  let disabledTools = hooks.disabledTools
+  let connectedAt: string | undefined
 
   const log = (level: McpLogEntry['level'], message: string, detail?: string): void => {
     hooks.onLog({ at: new Date().toISOString(), level, message, ...detail === undefined ? {} : { detail } })
@@ -54,6 +73,15 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
   const disposeTools = (): void => {
     for (const dispose of disposers.values()) dispose()
     disposers = new Map()
+  }
+  const registerTools = async (connected: Client): Promise<void> => {
+    const synced = await syncTools(hooks.ctx, connected, {
+      serverName: record.serverName,
+      toolCallTimeoutMs: record.toolCallTimeoutMs,
+      disabledTools,
+    })
+    disposers = synced.disposers
+    hooks.onTools(synced.listed)
   }
   const wait = hooks.delay ?? ((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)))
   const buildTransport = hooks.createTransport
@@ -73,6 +101,7 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
       if (stopped || generation !== currentGeneration) return
       generation += 1
       client = undefined
+      connectedAt = undefined
       disposeTools()
       void reconnect(undefined)
     }
@@ -80,17 +109,15 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
     try {
       await nextClient.connect(buildTransport())
       if (stopped || generation !== currentGeneration) return
-      disposers = await syncTools(hooks.ctx, nextClient, {
-        serverName: record.serverName,
-        toolCallTimeoutMs: record.toolCallTimeoutMs,
-      })
+      await registerTools(nextClient)
       reconnectFailures = 0
-      const connectedAt = new Date().toISOString()
+      connectedAt = new Date().toISOString()
       setStatus({ state: 'connected', toolCount: disposers.size, connectedAt })
       log('info', `Connected to MCP server "${record.serverName}" with ${disposers.size} tools`)
     } catch (error) {
       if (stopped || generation !== currentGeneration) return
       client = undefined
+      connectedAt = undefined
       try {
         await nextClient.close()
       } catch {
@@ -137,11 +164,32 @@ export function startConnection(record: McpServerRecord, hooks: ConnectionHooks)
   void run(0)
 
   return {
+    async applyToolSelection(selection: readonly string[]): Promise<void> {
+      disabledTools = selection
+      const current = client
+      if (stopped || current === undefined || connectedAt === undefined) return
+      disposeTools()
+      try {
+        await registerTools(current)
+      } catch (error) {
+        log('error', `Failed to re-list tools for MCP server "${record.serverName}"`, String(error))
+        try {
+          await current.close()
+        } catch {
+          // A server that cannot list its tools may already have closed.
+        }
+        throw error
+      }
+      setStatus({ state: 'connected', toolCount: disposers.size, connectedAt })
+      log('info', `MCP server "${record.serverName}" now exposes ${disposers.size} tools`)
+    },
+
     async stop(): Promise<void> {
       stopped = true
       generation += 1
       const current = client
       client = undefined
+      connectedAt = undefined
       if (current !== undefined) {
         try {
           await current.close()

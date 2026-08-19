@@ -4,7 +4,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { asMcpServerId, type McpConnectionStatus, type McpLogEntry, type McpServerId, type McpServerRecord } from '@anht3889/dsh-mcp-mgmt-mcp'
+import { asMcpServerId, type McpConnectionStatus, type McpLogEntry, type McpServerId, type McpServerRecord, type McpToolInfo } from '@anht3889/dsh-mcp-mgmt-mcp'
 import type { DiscoveredOAuthConfig, OAuthCallbackQuery } from '@anht3889/dsh-mcp-mgmt-oauth'
 import { validateRecord } from './catalog.ts'
 import { renderOAuthCompletionPage } from './oauth-page.ts'
@@ -45,6 +45,10 @@ export interface McpManagementApi {
   getStatus(id: McpServerId): McpConnectionStatus
   /** @param id - managed server identifier. @param after - exclusive log cursor. @returns retained logs. */
   getLogs(id: McpServerId, after?: number): { next: number; entries: McpLogEntry[] }
+  /** @param id - managed server identifier. @returns the tools last listed with their selection state. */
+  getTools(id: McpServerId): McpToolInfo[]
+  /** @param id - managed server identifier. @param toolName - raw tool name. @param enabled - desired registration state. */
+  setToolEnabled(id: McpServerId, toolName: string, enabled: boolean): Promise<void>
   /** @param id - managed server identifier. @returns the authorization URL. */
   startOAuth(id: McpServerId): Promise<{ authorizeUrl: string }>
   /** @param id - managed server identifier. */
@@ -189,6 +193,22 @@ async function route(req: IncomingMessage, res: ServerResponse, mcp: McpManageme
     respond(res, 200, await serverView(mcp, requireServer(mcp, id)))
     return
   }
+  if (req.method === 'POST' && parts.length === 5 && parts[2] === 'tools') {
+    const toolName = decodeURIComponent(parts[3])
+    const enabled = parts[4] === 'enable'
+    if (!enabled && parts[4] !== 'disable') {
+      respond(res, 404, { error: 'not found' })
+      return
+    }
+    // A name the server never listed would persist into the record's selection
+    // and silently outlive the mistake that produced it.
+    if (!mcp.getTools(id).some(tool => tool.name === toolName)) {
+      throw new HttpError(404, `MCP server ${id} has not listed a tool named ${toolName}`)
+    }
+    await mcp.setToolEnabled(id, toolName, enabled)
+    respond(res, 200, await serverView(mcp, requireServer(mcp, id)))
+    return
+  }
   if (req.method === 'POST' && parts.length === 4 && parts[2] === 'oauth') {
     if (parts[3] === 'start') respond(res, 200, await mcp.startOAuth(id))
     else if (parts[3] === 'clear') {
@@ -227,7 +247,12 @@ async function respondCallback(
 }
 
 async function serverView(mcp: McpManagementApi, record: McpServerRecord) {
-  return { record, status: mcp.getStatus(record.id), secrets: await mcp.describeSecrets(record.id) }
+  return {
+    record,
+    status: mcp.getStatus(record.id),
+    tools: mcp.getTools(record.id),
+    secrets: await mcp.describeSecrets(record.id),
+  }
 }
 
 function requireServer(mcp: McpManagementApi, rawId: string): McpServerRecord {

@@ -4,7 +4,7 @@
   gap: var(--dsw-space-4, 16px);
 }
 
-.header, .server, .actions, .serverSummary {
+.header, .actions {
   align-items: center;
   display: flex;
   gap: var(--dsw-space-3, 12px);
@@ -23,12 +23,6 @@
   margin-top: var(--dsw-space-1, 4px);
 }
 
-.content {
-  display: grid;
-  gap: var(--dsw-space-4, 16px);
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.7fr);
-}
-
 .list {
   display: grid;
   gap: var(--dsw-space-2, 8px);
@@ -41,13 +35,46 @@
   padding: var(--dsw-space-3, 12px);
 }
 
+/* The row fills the section width; the switch shares the first row of the grid
+   with the server name, and the login status spans both columns beneath. */
 .server {
-  flex-wrap: wrap;
-  justify-content: space-between;
+  align-items: center;
+  column-gap: var(--dsw-space-3, 12px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: var(--dsw-space-2, 8px);
+}
+
+.serverOpen {
+  align-items: start;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: var(--dsw-space-1, 4px);
+  justify-items: start;
+  padding: 0;
+  text-align: start;
+}
+
+.serverName {
+  font-weight: 600;
+}
+
+.serverMeta, .detailsMeta {
+  color: var(--dsw-fg-muted, inherit);
+}
+
+.serverControls {
+  align-items: center;
+  display: flex;
+  gap: var(--dsw-space-3, 12px);
 }
 
 .loginStatus, .loginError {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -60,25 +87,8 @@
   color: var(--dsw-danger-fg, inherit);
 }
 
-.serverSummary {
-  flex-wrap: wrap;
-}
-
 .actions {
   flex-wrap: wrap;
-}
-
-.primaryButton, .secondaryButton {
-  background: var(--dsw-button-bg, transparent);
-  border: 1px solid var(--dsw-button-border, currentColor);
-  border-radius: var(--dsw-radius-sm, 4px);
-  color: var(--dsw-button-fg, inherit);
-  cursor: pointer;
-  padding: var(--dsw-space-2, 8px) var(--dsw-space-3, 12px);
-}
-
-.secondaryButton {
-  background: var(--dsw-button-secondary-bg, transparent);
 }
 
 .toggle {
@@ -87,22 +97,23 @@
   gap: var(--dsw-space-2, 8px);
 }
 
-/* The default Modal card is sized for short confirmations; this form carries up
-   to a dozen fields, so it widens the card and scrolls its own field list. The
-   selector is doubled to outrank the primitive's own single-class width and
-   padding without depending on which stylesheet the shell injects first. */
-.editorDialog.editorDialog {
+/* The default Modal card is sized for short confirmations; the form carries up
+   to a dozen fields and the details dialog a whole tool list, so both widen the
+   card and scroll their own middle region. The selector is doubled to outrank
+   the primitive's own single-class width and padding without depending on which
+   stylesheet the shell injects first. */
+.editorDialog.editorDialog, .detailsDialog.detailsDialog {
   width: min(560px, 100%);
   padding: 0;
 
-  /* The field list scrolls inside this elevated surface, so the scrollbar
+  /* The scrolling region sits inside this elevated surface, so the scrollbar
      indirection is rebound on the surface and inherits down (see ui-theme
      styles/scrollbar.css). */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
-.editor {
+.details, .editor {
   display: grid;
   gap: var(--dsw-space-3, 12px);
   max-height: min(80vh, 720px);
@@ -110,8 +121,51 @@
   padding: var(--dsw-space-4, 16px);
 }
 
-.editorTitle {
+.editorTitle, .detailsTitle, .detailsSubtitle {
   margin: 0;
+}
+
+.detailsHeader, .toolsHeader {
+  align-items: center;
+  display: flex;
+  gap: var(--dsw-space-3, 12px);
+  justify-content: space-between;
+}
+
+.detailsMeta {
+  margin: var(--dsw-space-1, 4px) 0 0;
+}
+
+.detailsBody {
+  align-content: start;
+  display: grid;
+  gap: var(--dsw-space-4, 16px);
+  overflow-y: auto;
+}
+
+.toolList {
+  display: grid;
+  gap: var(--dsw-space-2, 8px);
+  list-style: none;
+  margin: var(--dsw-space-2, 8px) 0 0;
+  padding: 0;
+}
+
+.tool {
+  border-top: 1px solid var(--dsw-border, currentColor);
+  padding-top: var(--dsw-space-2, 8px);
+}
+
+.detailsFooter {
+  display: flex;
+  gap: var(--dsw-space-2, 8px);
+  justify-content: space-between;
+}
+
+.detailsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dsw-space-2, 8px);
 }
 
 .editorFields {
@@ -164,7 +218,12 @@
 }
 
 .logs {
+  margin-top: var(--dsw-space-2, 8px);
   overflow-wrap: anywhere;
+}
+
+.logs h3 {
+  margin: 0;
 }
 
 .logs ol {
@@ -179,12 +238,8 @@
 }
 
 @media (max-width: 720px) {
-  .content {
-    grid-template-columns: 1fr;
-  }
-
+  /* The controls drop below the summary instead of squeezing the name. */
   .server {
-    align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

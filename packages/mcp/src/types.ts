@@ -37,6 +37,11 @@ export interface McpServerRecord {
   cwd?: string
   url?: string
   auth: McpAuthConfig
+  /**
+   * Raw MCP tool names the manager withholds from the harness registry. An
+   * absent list registers every tool the server lists.
+   */
+  disabledTools?: string[]
   toolCallTimeoutMs: number
   reconnect: {
     enabled: boolean
@@ -46,6 +51,16 @@ export interface McpServerRecord {
   }
   createdAt: string
   updatedAt: string
+}
+
+/** One tool an MCP server listed, with the state of its registration. */
+export interface McpToolInfo {
+  /** The tool name as the MCP server lists it. */
+  name: string
+  /** The description the server advertises, empty when it advertises none. */
+  description: string
+  /** Whether the manager registers this tool on the harness tool registry. */
+  enabled: boolean
 }
 
 /** The in-memory connection state of an MCP server. */

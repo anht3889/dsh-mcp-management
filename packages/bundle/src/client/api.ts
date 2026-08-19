@@ -10,6 +10,7 @@ export interface McpServerRecord {
   cwd?: string
   url?: string
   auth: McpAuthConfig
+  disabledTools?: string[]
   toolCallTimeoutMs: number
   reconnect: {
     enabled: boolean
@@ -43,10 +44,19 @@ export interface McpLogEntry {
   detail?: string
 }
 
-/** A server plus live status and non-secret credential state. */
+/** One tool the server listed, with the state of its registration. */
+export interface McpToolInfo {
+  name: string
+  description: string
+  enabled: boolean
+}
+
+/** A server plus live status, listed tools, and non-secret credential state. */
 export interface McpServerView {
   record: McpServerRecord
   status: McpConnectionStatus
+  /** Tools from the server's most recent listing, empty until it connects once. */
+  tools: McpToolInfo[]
   secrets: Record<string, { configured: boolean }>
 }
 
@@ -90,6 +100,26 @@ export class McpManagementApi {
    */
   setEnabled(id: string, enabled: boolean): Promise<McpServerView> {
     return this.request(`/servers/${encodeURIComponent(id)}/${enabled ? 'enable' : 'disable'}`, { method: 'POST' })
+  }
+
+  /**
+   * @param id - server identifier.
+   * @param toolName - tool name as the server lists it.
+   * @param enabled - whether the model may call the tool.
+   * @returns the updated server view.
+   */
+  setToolEnabled(id: string, toolName: string, enabled: boolean): Promise<McpServerView> {
+    const action = enabled ? 'enable' : 'disable'
+    return this.request(`/servers/${encodeURIComponent(id)}/tools/${encodeURIComponent(toolName)}/${action}`, { method: 'POST' })
+  }
+
+  /**
+   * Starts a fresh connection generation, which re-lists the server's tools.
+   * @param id - server identifier.
+   * @returns the updated server view.
+   */
+  reload(id: string): Promise<McpServerView> {
+    return this.request(`/servers/${encodeURIComponent(id)}/connect`, { method: 'POST' })
   }
 
   /**

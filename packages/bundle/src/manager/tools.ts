@@ -4,6 +4,7 @@
  */
 
 import type { Client } from '@modelcontextprotocol/sdk/client'
+import type { McpToolInfo } from '@anht3889/dsh-mcp-mgmt-mcp/types'
 import { publicToolName } from './naming.ts'
 
 /** Registration API consumed from the harness tool runtime. */
@@ -16,14 +17,24 @@ export interface ToolContext {
   tools: ToolRegistry
 }
 
-/** Options that identify an MCP server and bound each call. */
+/** Options that identify an MCP server, select its tools, and bound each call. */
 export interface SyncToolsOptions {
   serverName: string
   toolCallTimeoutMs: number
+  /** Raw tool names to list without registering. */
+  disabledTools: readonly string[]
 }
 
 /** One registered MCP tool's teardown, keyed by its public name. */
 export type ToolDisposers = Map<string, () => void>
+
+/** The outcome of one tool-discovery pass. */
+export interface SyncedTools {
+  /** Disposers for the tools this pass registered, keyed by public name. */
+  disposers: ToolDisposers
+  /** Every tool the server listed, registered or not, in listing order. */
+  listed: McpToolInfo[]
+}
 
 interface ToolDefinition {
   name: string
@@ -43,25 +54,33 @@ interface McpResult {
 }
 
 /**
- * Lists an MCP server's tools and registers them under public names.
+ * Lists an MCP server's tools and registers the selected ones under public
+ * names. A disabled tool is still reported, so the settings UI can offer it
+ * without a reconnect.
  *
  * @param ctx - Harness context that owns the tool registry.
  * @param client - Connected MCP client used for discovery and invocation.
- * @param opts - Server namespace and per-tool timeout.
- * @returns Disposers for every registration created by this call.
+ * @param opts - Server namespace, disabled tool names, and per-tool timeout.
+ * @returns Disposers for every registration created by this call, plus every
+ *   listed tool.
  */
 export async function syncTools(
   ctx: ToolContext,
   client: Client,
   opts: SyncToolsOptions,
-): Promise<ToolDisposers> {
+): Promise<SyncedTools> {
   const disposers: ToolDisposers = new Map()
+  const listed: McpToolInfo[] = []
+  const disabled = new Set(opts.disabledTools)
   let cursor: string | undefined
 
   try {
     do {
       const result = await client.listTools(cursor === undefined ? undefined : { cursor })
       for (const tool of result.tools) {
+        const enabled = !disabled.has(tool.name)
+        listed.push({ name: tool.name, description: tool.description ?? '', enabled })
+        if (!enabled) continue
         const name = publicToolName(opts.serverName, tool.name)
         if (disposers.has(name)) {
           throw new Error(`MCP server "${opts.serverName}" listed duplicate tool "${tool.name}"`)
@@ -76,7 +95,7 @@ export async function syncTools(
     throw error
   }
 
-  return disposers
+  return { disposers, listed }
 }
 
 /** Builds the harness registration for one MCP tool. */

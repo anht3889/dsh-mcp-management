@@ -1,4 +1,4 @@
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -47,7 +47,10 @@ describe('McpManagerRuntime', () => {
 
   it('connects an enabled server after upserting it', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-mcp-manager-runtime-'))
-    const startConnection = vi.fn(() => ({ stop: vi.fn(async () => {}) }))
+    const startConnection = vi.fn(() => ({
+      stop: vi.fn(async () => {}),
+      applyToolSelection: vi.fn(async () => {}),
+    }))
     const ctx = new Context()
     ctx.provide('tools', { register: vi.fn(() => vi.fn()) })
     const runtime = await McpManagerRuntime.create(ctx, {
@@ -62,6 +65,34 @@ describe('McpManagerRuntime', () => {
       expect.objectContaining({ id: asMcpServerId('server'), enabled: true }),
       expect.any(Object),
     )
+  })
+
+  it('persists a disabled tool and keeps reporting it as listed', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-mcp-manager-runtime-'))
+    const catalogPath = join(root, 'servers.json')
+    const ctx = new Context()
+    ctx.provide('tools', { register: vi.fn(() => vi.fn()) })
+    const transport = new ToolTransport()
+    const runtime = await McpManagerRuntime.create(ctx, {
+      catalogPath,
+      secretsPath: join(root, 'secrets.yaml'),
+      startConnection: (record, hooks) => startConnection(record, {
+        ...hooks,
+        createTransport: () => transport,
+      }),
+    })
+    await runtime.upsert(record())
+    await runtime.connect(asMcpServerId('server'))
+    await transport.connected
+    await vi.waitFor(() => expect(runtime.getTools(asMcpServerId('server'))).toHaveLength(1))
+
+    await runtime.setToolEnabled(asMcpServerId('server'), 'status', false)
+
+    expect(runtime.getTools(asMcpServerId('server'))).toEqual([
+      { name: 'status', description: 'Reports status', enabled: false },
+    ])
+    const stored = JSON.parse(await readFile(catalogPath, 'utf8')) as McpServerRecord[]
+    expect(stored[0]?.disabledTools).toEqual(['status'])
   })
 })
 

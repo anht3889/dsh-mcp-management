@@ -28,10 +28,31 @@ describe('registerHttpApi', () => {
       servers: [{
         record: record(),
         status: { state: 'disconnected' },
+        tools: [{ name: 'status', description: 'Reports status', enabled: true }],
         secrets: { authorization: { configured: true } },
       }],
     })
     expect(JSON.stringify(response.body)).not.toContain('Bearer secret')
+  })
+
+  it('persists a tool selection the connected server has listed', async () => {
+    const api = fakeApi()
+    const request = await start(api, servers)
+
+    const response = await request('/mcp-management/servers/server/tools/status/disable', 'POST')
+
+    expect(response.status).toBe(200)
+    expect(api.toolSelection).toEqual([{ toolName: 'status', enabled: false }])
+  })
+
+  it('refuses a tool the server has not listed rather than storing the name', async () => {
+    const api = fakeApi()
+    const request = await start(api, servers)
+
+    const response = await request('/mcp-management/servers/server/tools/typo/disable', 'POST')
+
+    expect(response.status).toBe(404)
+    expect(api.toolSelection).toEqual([])
   })
 
   it('upserts the record identified by the request path', async () => {
@@ -145,12 +166,14 @@ type RouteHandler = (req: IncomingMessage, res: ServerResponse) => void | Promis
 function fakeApi(callbackPaths: string[] = []): McpManagementApi & {
   secretValues: Record<string, string>
   upserted?: McpServerRecord
+  toolSelection: { toolName: string; enabled: boolean }[]
   catalogChanged: () => void
 } {
   const server = record()
   const listeners = new Set<() => void>()
   return {
     secretValues: {},
+    toolSelection: [],
     catalogChanged: () => { for (const listener of listeners) listener() },
     oauthCallbackPaths: () => callbackPaths,
     onCatalogChanged(listener) {
@@ -166,6 +189,8 @@ function fakeApi(callbackPaths: string[] = []): McpManagementApi & {
     async disconnect() {},
     getStatus: () => ({ state: 'disconnected' }),
     getLogs: () => ({ next: 0, entries: [] }),
+    getTools: () => [{ name: 'status', description: 'Reports status', enabled: true }],
+    async setToolEnabled(_id, toolName, enabled) { this.toolSelection.push({ toolName, enabled }) },
     async startOAuth() { return { authorizeUrl: 'https://idp.example/authorize' } },
     async clearOAuth() {},
     async setSecrets(_id, secrets) { this.secretValues = secrets },
