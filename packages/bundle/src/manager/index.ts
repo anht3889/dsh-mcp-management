@@ -10,6 +10,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 import { registerHttpApi, type McpManagementWebServer } from './http-api.ts'
 import { McpManagerRuntime, type McpManagerRuntimeConfig } from './runtime.ts'
 import type { CredentialsApi } from './secrets.ts'
+import { trustSystemCertificates } from './trust.ts'
 
 export { McpManagerRuntime } from './runtime.ts'
 export type { McpManagerRuntimeConfig, McpManagerRuntimeOptions } from './runtime.ts'
@@ -28,6 +29,12 @@ export interface Config {
   secretsPath?: string
   /** Browser-visible base URL used by OAuth redirect URIs. */
   publicOrigin?: string
+  /**
+   * Trusts the host's certificate authorities in addition to Node's bundled
+   * ones, for MCP servers behind a private CA. This widens TLS trust for the
+   * whole host process, so it stays off until an operator asks for it.
+   */
+  trustSystemCertificates?: boolean
 }
 
 /** Loader schema with one shared user-home location for MCP data. */
@@ -35,15 +42,19 @@ export const Config: z<Config> = z.object({
   catalogPath: z.string().default(dshHomePath('mcp', 'servers.json')),
   secretsPath: z.string().default(dshHomePath('mcp', 'secrets.yaml')),
   publicOrigin: z.string().default(undefined as unknown as string),
+  trustSystemCertificates: z.boolean().default(false),
 })
 
 /**
  * Loads configured MCP servers, publishes `ctx.mcp`, and disposes every
  * connection when the plugin fiber unloads.
  * @param ctx - plugin context containing the tool registry.
- * @param config - resolved MCP storage paths.
+ * @param config - resolved MCP storage paths and TLS trust choice.
  */
 export async function apply(ctx: Context, config: Config = {}): Promise<void> {
+  if (config.trustSystemCertificates === true) {
+    ctx.effect(() => trustSystemCertificates(), 'mcp-manager.system-certificates')
+  }
   const paths: McpManagerRuntimeConfig = {
     catalogPath: config.catalogPath ?? dshHomePath('mcp', 'servers.json'),
     secretsPath: config.secretsPath ?? dshHomePath('mcp', 'secrets.yaml'),

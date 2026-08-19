@@ -8,7 +8,7 @@ Architecture and scope live in [docs/design.md](https://github.com/anht3889/dsh-
 From npm (after the packages are published):
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add @anht3889/dsh-mcp-mgmt-bundle@0.0.3
+npx @deepseek-ai/dsh plugin --profile web add @anht3889/dsh-mcp-mgmt-bundle@0.0.4
 ```
 
 From a local checkout (development):
@@ -44,6 +44,10 @@ Do not also mount `@deepseek-ai/dsh-mcp-client` for the same `serverName` — bo
 | Secrets (tokens, header values, client secret) | `~/.dsh/mcp/secrets.yaml`, or `ctx.credentials` when mounted |
 
 Override with the manager plugin's `catalogPath` / `secretsPath` config.
+
+## Servers behind a private certificate authority
+
+Node trusts only its own bundled certificate authorities, so an HTTP server whose certificate comes from a corporate CA fails to connect with `self-signed certificate in certificate chain` even though a browser or `curl` reaches it. Set `trustSystemCertificates: true` on the manager plugin to trust the host's authorities as well, or launch the host with `NODE_OPTIONS=--use-system-ca`. Both widen TLS trust for the whole host process, which is why the config stays off by default.
 
 ## OAuth
 

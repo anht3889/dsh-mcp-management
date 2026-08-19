@@ -232,6 +232,7 @@ A tool named in `disabledTools` is reported to the UI but never registered. Chan
 - Registration conflict on `serverName` or foreign tool squat: refuse connect, log error (parity with harness loud-fail posture).
 - OAuth state mismatch / exchange failure: `failed` + clear pending state; tokens unchanged.
 - Missing webserver: Host manager still runs headless connect-from-catalog; UI and OAuth callback unavailable (document).
+- Server behind a private certificate authority: `failed` with the TLS cause, until the manager's `trustSystemCertificates` config adds the host's authorities to Node's bundled ones. The trust store is process-global, so the config defaults to off and a Node build without `tls.setDefaultCACertificates` fails loud at load rather than connecting on bundled trust alone.
 
 ## Success criteria
 
