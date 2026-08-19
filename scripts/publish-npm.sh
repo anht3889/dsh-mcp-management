@@ -31,13 +31,16 @@ publish_one() {
     return 0
   fi
 
-  args=(publish --access public --no-git-checks --tag "$tag")
+  # Publish with npm from the package directory: pnpm publish can leave the
+  # registry's top-level readme metadata empty, so the npmjs package page stays
+  # blank even when README.md is in the tarball.
+  args=(publish --access public --tag "$tag")
   if [[ "${DRY_RUN:-false}" == "true" ]]; then
     args+=(--dry-run)
   fi
 
   echo "publish ${name}@${version} (tag=${tag})"
-  pnpm --filter "$name" "${args[@]}"
+  (cd "$dir" && npm "${args[@]}")
 }
 
 # npmjs shows packages/bundle/README.md, so keep it identical to the repo README.
