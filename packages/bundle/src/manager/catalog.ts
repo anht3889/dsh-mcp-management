@@ -99,6 +99,15 @@ export function validateRecord(
     throw new Error('stdio transport requires command')
   }
 
+  if (record.transport === 'stdio' && record.command !== undefined && commandCarriesFlags(record.command)) {
+    throw new Error(`stdio command names one executable, so its flags belong in args: ${record.command}`)
+  }
+
+  if (record.args !== undefined
+    && (!Array.isArray(record.args) || record.args.some(argument => typeof argument !== 'string'))) {
+    throw new Error('args must hold strings')
+  }
+
   if (record.transport === 'streamable-http' && !record.url) {
     throw new Error('streamable-http transport requires url')
   }
@@ -112,6 +121,19 @@ export function validateRecord(
     && (!Array.isArray(record.disabledTools) || record.disabledTools.some(name => typeof name !== 'string' || name === ''))) {
     throw new Error('disabledTools must hold non-empty MCP tool names')
   }
+}
+
+/**
+ * Detects a whole command line where one executable belongs. Spawning does not
+ * split on whitespace, so such a command names a file that cannot exist and
+ * fails with a bare `ENOENT`. Only a flag counts, because an executable path may
+ * legitimately contain spaces.
+ *
+ * @param command - the configured stdio command.
+ * @returns whether a token after the executable reads as a flag.
+ */
+function commandCarriesFlags(command: string): boolean {
+  return command.trim().split(/\s+/).slice(1).some(token => token.startsWith('-'))
 }
 
 /**

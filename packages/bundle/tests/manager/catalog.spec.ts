@@ -55,6 +55,18 @@ describe('catalog', () => {
     expect(() => validateRecord(b, [a])).toThrow(/serverName/)
   })
 
+  it('rejects a stdio command carrying its own flags, but not a path with spaces', () => {
+    // Spawning does not split on whitespace, so the flags would become part of
+    // the executable name and fail with a bare ENOENT.
+    expect(() => validateRecord({ ...base(), command: '/opt/tci-mcp --cache-dir /tmp/tci' }, [])).toThrow(/args/)
+    expect(() => validateRecord({ ...base(), command: '/Applications/My App/bin/server' }, [])).not.toThrow()
+    expect(() => validateRecord({ ...base(), command: '/opt/tci-mcp', args: ['--cache-dir', '/tmp/tci'] }, [])).not.toThrow()
+  })
+
+  it('rejects args that are not strings', () => {
+    expect(() => validateRecord({ ...base(), args: ['--flag', 7] as unknown as string[] }, [])).toThrow(/args/)
+  })
+
   it('rejects an oauth record whose callback path is absent or relative', () => {
     const oauth = (redirectPath: unknown) => ({
       ...base(),

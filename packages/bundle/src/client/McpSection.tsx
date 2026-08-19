@@ -367,6 +367,9 @@ function Editor({
   onSave: (record: McpServerRecord, secrets: Record<string, string>) => void
 }): ReactNode {
   const [draft, setDraft] = useState(record)
+  // Editing the text rather than the parsed list keeps a half-typed line, and
+  // the blank line that starts the next argument, on screen.
+  const [argsText, setArgsText] = useState((record.args ?? []).join('\n'))
   const [secrets, setSecrets] = useState<Record<string, string>>({})
   const [discovering, setDiscovering] = useState(false)
   const [discoverError, setDiscoverError] = useState<string | undefined>(undefined)
@@ -377,6 +380,17 @@ function Editor({
   }
   const updateAuth = (auth: McpAuthConfig): void => {
     setDraft(previous => ({ ...previous, auth }))
+  }
+  const updateArgs = (event: ChangeEvent<HTMLTextAreaElement>): void => {
+    const { value } = event.target
+    setArgsText(value)
+    const args = value.split('\n').map(line => line.trim()).filter(line => line !== '')
+    setDraft(previous => {
+      if (args.length > 0) return { ...previous, args }
+      const next = { ...previous }
+      delete next.args
+      return next
+    })
   }
   const setNumber = (name: 'toolCallTimeoutMs' | 'initialDelayMs' | 'maxDelayMs' | 'maxAttempts', value: string): void => {
     const number = Number(value)
@@ -437,7 +451,12 @@ function Editor({
             </select>
           </label>
           {draft.transport === 'stdio'
-            ? <label>{t('command')}<input name="command" value={draft.command ?? ''} onChange={update} required /></label>
+            ? (
+                <>
+                  <label>{t('command')}<input name="command" value={draft.command ?? ''} onChange={update} required /></label>
+                  <label>{t('commandArgs')}<textarea name="args" value={argsText} onChange={updateArgs} rows={3} /></label>
+                </>
+              )
             : <label>{t('url')}<input name="url" value={draft.url ?? ''} onChange={update} required /></label>}
           <label>{t('authKind')}
             <select value={draft.auth.kind} onChange={event => {

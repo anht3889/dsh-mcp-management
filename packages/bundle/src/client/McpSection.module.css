@@ -204,12 +204,20 @@
 }
 
 /* Text-field chrome would render a checkbox as a large empty box. */
-.editor input:not([type='checkbox']), .editor select {
+.editor input:not([type='checkbox']), .editor select, .editor textarea {
   background: var(--dsw-input-bg, transparent);
   border: 1px solid var(--dsw-input-border, currentColor);
   border-radius: var(--dsw-radius-sm, 4px);
   color: var(--dsw-input-fg, inherit);
   padding: var(--dsw-space-2, 8px);
+}
+
+/* One argument per line reads as text, and the browser default is a serif font
+   at a width that ignores the dialog's grid. */
+.editor textarea {
+  font: inherit;
+  resize: vertical;
+  width: 100%;
 }
 
 .editor input[type='checkbox'] {

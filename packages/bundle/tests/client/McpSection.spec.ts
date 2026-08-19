@@ -307,6 +307,34 @@ test('deletes a server only after the confirmation is accepted', async () => {
   expect(document.body.querySelector('[role="dialog"]')).toBeNull()
 })
 
+test('edits stdio arguments as a list, one per line', async () => {
+  // A command field alone forces the operator to paste a whole command line,
+  // which spawning cannot split.
+  const view = filesystemView() as { record: Record<string, unknown> }
+  view.record.args = ['--root', '/srv']
+  const fetchMock = stubManagement([view])
+  const container = await renderSection()
+  await act(async () => {
+    openDetails(container, 'Filesystem')
+  })
+  await act(async () => {
+    clickButton(dialog(), zh.edit)
+  })
+
+  const form = editorForm()
+  const args = form.querySelector('textarea[name="args"]') as HTMLTextAreaElement
+  expect(args.value).toBe('--root\n/srv')
+
+  await act(async () => {
+    type(args, '--root\n/data\n')
+  })
+  await act(async () => {
+    clickButton(form, zh.save)
+  })
+
+  expect(body(fetchMock, 'PUT').args).toEqual(['--root', '/data'])
+})
+
 /** Answers every management route this section calls, from fixed server views. */
 function stubManagement(views: unknown[]): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn(async (input: string, init?: { method?: string }) => {
@@ -420,6 +448,24 @@ function requests(fetchMock: { mock: { calls: unknown[][] } }, method: string): 
   return fetchMock.mock.calls
     .filter(([, init]) => (init as { method?: string } | undefined)?.method === method)
     .map(([path]) => path as string)
+}
+
+/**
+ * Replaces a field's text the way a keystroke does. Assigning `value` directly
+ * runs React's own setter, which records the new text as already seen and then
+ * treats the event as a no-op, so the prototype setter has to write it.
+ */
+function type(field: HTMLTextAreaElement, value: string): void {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')
+  descriptor?.set?.call(field, value)
+  field.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+/** Parsed body of the first request the section issued with this method. */
+function body(fetchMock: { mock: { calls: unknown[][] } }, method: string): Record<string, unknown> {
+  const call = fetchMock.mock.calls.find(([, init]) => (init as { method?: string } | undefined)?.method === method)
+  if (call === undefined) throw new Error(`no ${method} request was issued`)
+  return JSON.parse((call[1] as { body: string }).body) as Record<string, unknown>
 }
 
 /** The editor form, which the dialog portals outside the section container. */

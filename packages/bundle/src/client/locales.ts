@@ -36,6 +36,7 @@ export type McpSettingsKey =
   | 'transportStdio'
   | 'transportHttp'
   | 'command'
+  | 'commandArgs'
   | 'url'
   | 'authKind'
   | 'authNone'
@@ -105,6 +106,7 @@ export const zh: Record<McpSettingsKey, string> = {
   transportStdio: '标准输入输出',
   transportHttp: 'HTTP',
   command: '命令',
+  commandArgs: '参数（每行一个）',
   url: 'URL',
   authKind: '认证方式',
   authNone: '无认证',
@@ -175,6 +177,7 @@ export const en: Record<McpSettingsKey, string> = {
   transportStdio: 'Standard input/output',
   transportHttp: 'HTTP',
   command: 'Command',
+  commandArgs: 'Arguments (one per line)',
   url: 'URL',
   authKind: 'Authentication',
   authNone: 'None',
