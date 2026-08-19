@@ -1,7 +1,7 @@
 {
   "name": "@anht3889/dsh-mcp-mgmt-bundle",
   "description": "DeepSeek Harness profile bundle for MCP connection management in Web Settings",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "keywords": [
     "mcp",
     "model-context-protocol",

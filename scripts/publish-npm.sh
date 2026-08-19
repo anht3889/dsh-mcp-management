@@ -40,6 +40,9 @@ publish_one() {
   pnpm --filter "$name" "${args[@]}"
 }
 
+# npmjs shows packages/bundle/README.md, so keep it identical to the repo README.
+cp README.md packages/bundle/README.md
+
 for dir in "${packages[@]}"; do
   publish_one "$dir"
 done
