@@ -34,7 +34,7 @@
   gap: var(--dsw-space-2, 8px);
 }
 
-.server, .editor, .logs {
+.server, .logs {
   background: var(--dsw-bg-elevated, transparent);
   border: 1px solid var(--dsw-border, currentColor);
   border-radius: var(--dsw-radius-md, 8px);
@@ -82,13 +82,59 @@
 }
 
 .toggle {
+  align-items: center;
   display: inline-flex;
-  gap: var(--dsw-space-1, 4px);
+  gap: var(--dsw-space-2, 8px);
+}
+
+/* The default Modal card is sized for short confirmations; this form carries up
+   to a dozen fields, so it widens the card and scrolls its own field list. The
+   selector is doubled to outrank the primitive's own single-class width and
+   padding without depending on which stylesheet the shell injects first. */
+.editorDialog.editorDialog {
+  width: min(560px, 100%);
+  padding: 0;
+
+  /* The field list scrolls inside this elevated surface, so the scrollbar
+     indirection is rebound on the surface and inherits down (see ui-theme
+     styles/scrollbar.css). */
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
 .editor {
   display: grid;
   gap: var(--dsw-space-3, 12px);
+  max-height: min(80vh, 720px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: var(--dsw-space-4, 16px);
+}
+
+.editorTitle {
+  margin: 0;
+}
+
+.editorFields {
+  display: grid;
+  gap: var(--dsw-space-3, 12px);
+  overflow-y: auto;
+  align-content: start;
+}
+
+.editorFooter {
+  display: flex;
+  gap: var(--dsw-space-2, 8px);
+  justify-content: flex-end;
+}
+
+.advancedToggle {
+  background: none;
+  border: none;
+  color: var(--dsw-fg-muted, inherit);
+  cursor: pointer;
+  justify-self: start;
+  padding: 0;
+  text-decoration: underline;
 }
 
 .editor label {
@@ -96,12 +142,25 @@
   gap: var(--dsw-space-1, 4px);
 }
 
-.editor input, .editor select {
+/* A checkbox sits beside its text, so it opts out of the stacked label layout
+   the text fields use; the type selector is needed to outrank `.editor label`. */
+.editor label.toggle {
+  display: flex;
+  gap: var(--dsw-space-2, 8px);
+}
+
+/* Text-field chrome would render a checkbox as a large empty box. */
+.editor input:not([type='checkbox']), .editor select {
   background: var(--dsw-input-bg, transparent);
   border: 1px solid var(--dsw-input-border, currentColor);
   border-radius: var(--dsw-radius-sm, 4px);
   color: var(--dsw-input-fg, inherit);
   padding: var(--dsw-space-2, 8px);
+}
+
+.editor input[type='checkbox'] {
+  flex: none;
+  margin: 0;
 }
 
 .logs {

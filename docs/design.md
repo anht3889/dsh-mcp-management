@@ -185,7 +185,8 @@ On successful connect: `listTools` → register each tool on `ctx.tools` under `
 
 - Nav section **MCP** via `settings.section`.
 - **List:** serverName, transport, status, enabled toggle, tool count; actions Add / Edit / Logs / Authorize / Delete.
-- **Editor:** stdio vs HTTP fields; auth kind; write-only secret controls; Save → `PUT` (+ connect when enabled).
+- **Editor:** a `Modal` dialog from `@deepseek-ai/dsh-client-ui-primitives` (a platform module the web shell shares, so the bundle imports it as an external). stdio vs HTTP fields; auth kind; write-only secret controls; tool timeout and reconnect fields behind an Advanced disclosure; Save → `PUT` (+ connect when enabled). Escape, the mask, and Cancel all discard the draft.
+- **Delete:** a confirmation dialog naming the server; the `DELETE` request is issued only after it is accepted.
 - **Logs:** poll with `?after=`; level filter; clear is UI-local in v1.
 - Poll list/status ~2s while section open; faster on logs view.
 - Authorize opens `authorizeUrl` in a new tab; UI polls until connected or failed.

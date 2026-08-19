@@ -22,6 +22,9 @@ export type McpSettingsKey =
   | 'noLogs'
   | 'addServer'
   | 'editServer'
+  | 'deleteServer'
+  | 'deleteServerConfirm'
+  | 'advanced'
   | 'serverName'
   | 'serverId'
   | 'transport'
@@ -83,6 +86,9 @@ export const zh: Record<McpSettingsKey, string> = {
   noLogs: '暂无日志。',
   addServer: '添加 MCP 服务',
   editServer: '编辑 MCP 服务',
+  deleteServer: '删除 MCP 服务',
+  deleteServerConfirm: '删除后将断开连接并移除该服务的工具，此操作无法撤销。',
+  advanced: '高级设置',
   serverName: '名称',
   serverId: '标识',
   transport: '传输方式',
@@ -145,6 +151,9 @@ export const en: Record<McpSettingsKey, string> = {
   noLogs: 'No logs yet.',
   addServer: 'Add MCP server',
   editServer: 'Edit MCP server',
+  deleteServer: 'Delete MCP server',
+  deleteServerConfirm: 'Deleting disconnects the server and removes its tools. This cannot be undone.',
+  advanced: 'Advanced settings',
   serverName: 'Name',
   serverId: 'Identifier',
   transport: 'Transport',

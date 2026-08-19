@@ -6,7 +6,20 @@ import { McpManagementApi } from '../../src/client/api.ts'
 import { McpSection, newServer } from '../../src/client/McpSection.tsx'
 import { zh } from '../../src/client/locales.ts'
 
+// React 18 requires this flag before act() outside a framework test runner.
+;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+
+/**
+ * Roots rendered by the current test. The dialog listens for Escape on the
+ * document, so a root left mounted would answer a later test's key press and
+ * then fail to detach its portal from the emptied body.
+ */
+const roots: { unmount: () => void }[] = []
+
 afterEach(() => {
+  act(() => {
+    for (const root of roots.splice(0)) root.unmount()
+  })
   vi.unstubAllGlobals()
   document.body.replaceChildren()
 })
@@ -100,10 +113,9 @@ test('offers Discover when OAuth is selected and requires a URL first', async ()
   const container = await renderSection()
 
   await act(async () => {
-    ;[...container.querySelectorAll('button')].find(button => button.textContent === zh.add)?.click()
+    clickButton(container, zh.add)
   })
-  const form = container.querySelector('form')
-  if (form === null) throw new Error('editor form missing')
+  const form = editorForm()
   await act(async () => {
     const transport = form.querySelector('select[name="transport"]') as HTMLSelectElement
     transport.value = 'streamable-http'
@@ -116,14 +128,96 @@ test('offers Discover when OAuth is selected and requires a URL first', async ()
     auth.dispatchEvent(new Event('change', { bubbles: true }))
   })
 
-  expect(container.textContent).toContain(zh.discoverOAuthHint)
+  expect(form.textContent).toContain(zh.discoverOAuthHint)
   // The redirect URI must be visible verbatim: an identity provider rejects an
   // authorization whose redirect URI is absent from the client registration.
-  expect(container.textContent).toContain(`${location.origin}/callback`)
+  expect(form.textContent).toContain(`${location.origin}/callback`)
   await act(async () => {
-    ;[...form.querySelectorAll('button')].find(button => button.textContent === zh.discoverOAuth)?.click()
+    clickButton(form, zh.discoverOAuth)
   })
-  expect(container.textContent).toContain(zh.discoverOAuthNeedUrl)
+  expect(form.textContent).toContain(zh.discoverOAuthNeedUrl)
+})
+
+test('opens the editor in a dialog instead of below the server list', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ servers: [] }), { status: 200 })))
+  const container = await renderSection()
+
+  await act(async () => {
+    clickButton(container, zh.add)
+  })
+
+  const dialog = document.body.querySelector('[role="dialog"]')
+  expect(dialog?.getAttribute('aria-modal')).toBe('true')
+  expect(dialog?.getAttribute('aria-label')).toBe(zh.addServer)
+  // The section itself must not grow a second copy of the form below the list.
+  expect(container.querySelector('form')).toBeNull()
+})
+
+test('closes the editor when Escape is pressed', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ servers: [] }), { status: 200 })))
+  const container = await renderSection()
+  await act(async () => {
+    clickButton(container, zh.add)
+  })
+
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+  })
+
+  expect(document.body.querySelector('[role="dialog"]')).toBeNull()
+})
+
+test('keeps reconnect settings behind the advanced disclosure', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ servers: [] }), { status: 200 })))
+  const container = await renderSection()
+  await act(async () => {
+    clickButton(container, zh.add)
+  })
+
+  expect(editorForm().textContent).not.toContain(zh.reconnectMaxAttempts)
+
+  await act(async () => {
+    clickButton(editorForm(), zh.advanced)
+  })
+
+  expect(editorForm().textContent).toContain(zh.reconnectMaxAttempts)
+})
+
+test('deletes a server only after the confirmation is accepted', async () => {
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+    servers: [{
+      record: {
+        id: 'filesystem',
+        serverName: 'Filesystem',
+        enabled: true,
+        transport: 'stdio',
+        auth: { kind: 'none' },
+        toolCallTimeoutMs: 30_000,
+        reconnect: { enabled: true, initialDelayMs: 100, maxDelayMs: 1_000, maxAttempts: 3 },
+        createdAt: '2026-08-17T00:00:00.000Z',
+        updatedAt: '2026-08-17T00:00:00.000Z',
+      },
+      status: { state: 'disconnected' },
+      secrets: {},
+    }],
+  }), { status: 200 }))
+  vi.stubGlobal('fetch', fetchMock)
+  const container = await renderSection()
+
+  await act(async () => {
+    clickButton(container, zh.delete)
+  })
+
+  const confirmation = document.body.querySelector('[role="dialog"]')
+  expect(confirmation?.textContent).toContain('Filesystem')
+  expect(deleteRequests(fetchMock)).toHaveLength(0)
+
+  await act(async () => {
+    clickButton(confirmation as HTMLElement, zh.delete)
+  })
+
+  expect(deleteRequests(fetchMock)).toEqual(['/mcp-management/servers/filesystem'])
+  expect(document.body.querySelector('[role="dialog"]')).toBeNull()
 })
 
 function stubOAuthServer(): void {
@@ -155,8 +249,10 @@ function stubOAuthServer(): void {
 async function renderSection(): Promise<HTMLElement> {
   const container = document.createElement('div')
   document.body.append(container)
+  const root = createRoot(container)
+  roots.push(root)
   await act(async () => {
-    createRoot(container).render(createElement(McpSection, { api: new McpManagementApi(), t: key => zh[key] }))
+    root.render(createElement(McpSection, { api: new McpManagementApi(), t: key => zh[key] }))
   })
   return container
 }
@@ -165,4 +261,25 @@ function authorizeButton(container: HTMLElement): HTMLButtonElement {
   const button = [...container.querySelectorAll('button')].find(candidate => candidate.textContent === zh.authorize)
   if (button === undefined) throw new Error('the Authorize button is not rendered')
   return button
+}
+
+/** Clicks the button carrying exactly this label, failing loudly when absent. */
+function clickButton(scope: HTMLElement, label: string): void {
+  const button = [...scope.querySelectorAll('button')].find(candidate => candidate.textContent === label)
+  if (button === undefined) throw new Error(`no button labelled ${label}`)
+  button.click()
+}
+
+/** The editor form, which the dialog portals outside the section container. */
+function editorForm(): HTMLFormElement {
+  const form = document.body.querySelector('[role="dialog"] form')
+  if (form === null) throw new Error('the editor dialog is not open')
+  return form as HTMLFormElement
+}
+
+/** Paths of the DELETE calls the section has issued so far. */
+function deleteRequests(fetchMock: { mock: { calls: unknown[][] } }): string[] {
+  return fetchMock.mock.calls
+    .filter(([, init]) => (init as { method?: string } | undefined)?.method === 'DELETE')
+    .map(([path]) => path as string)
 }

@@ -21,6 +21,9 @@
       "path": "../../../deepseek-harness/packages/client/ui-slots"
     },
     {
+      "path": "../../../deepseek-harness/packages/client/ui-primitives"
+    },
+    {
       "path": "../../../deepseek-harness/packages/client/ui-settings"
     },
     {

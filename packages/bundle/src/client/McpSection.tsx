@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
+import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { McpAuthConfig, McpManagementApi, McpServerRecord, McpServerView } from './api.ts'
 import { McpSettingsStore } from './store.ts'
 import type { McpSettingsKey } from './locales.ts'
@@ -30,6 +31,7 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
   const store = useMemo(() => new McpSettingsStore(api), [api])
   const [state, setState] = useState(store.getSnapshot())
   const [editing, setEditing] = useState<McpServerRecord | undefined>(undefined)
+  const [pendingDelete, setPendingDelete] = useState<McpServerRecord | undefined>(undefined)
   const [login, setLogin] = useState<{ id: string; state: OAuthLoginState } | undefined>(undefined)
 
   useEffect(() => {
@@ -81,6 +83,12 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
     await store.load()
   }
 
+  const remove = async (record: McpServerRecord): Promise<void> => {
+    setPendingDelete(undefined)
+    await api.remove(record.id)
+    await store.load()
+  }
+
   return (
     <section className={styles.section}>
       <header className={styles.header}>
@@ -104,11 +112,7 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
               onLogs={() => { store.select(state.selectedId === server.record.id ? undefined : server.record.id) }}
               onToggle={() => { void api.setEnabled(server.record.id, !server.record.enabled).then(() => store.load()) }}
               onAuthorize={() => { authorize(server.record.id) }}
-              onDelete={() => {
-                if (window.confirm(`Delete ${server.record.serverName}?`)) {
-                  void api.remove(server.record.id).then(() => store.load())
-                }
-              }}
+              onDelete={() => { setPendingDelete(server.record) }}
             />
           ))}
           {state.status === 'loading' && state.servers.length === 0 ? <p>{t('loading')}</p> : null}
@@ -125,6 +129,26 @@ export function McpSection({ api, t }: McpSectionProps): ReactNode {
           onSave={(record, secrets) => { void save(record, secrets) }}
         />
       )}
+      <Modal
+        open={pendingDelete !== undefined}
+        onClose={() => { setPendingDelete(undefined) }}
+        title={t('deleteServer')}
+        closeLabel={t('cancel')}
+        description={t('deleteServerConfirm')}
+        footer={(
+          <>
+            <Button variant="outline" onClick={() => { setPendingDelete(undefined) }}>{t('cancel')}</Button>
+            <Button
+              variant="primary"
+              onClick={() => { if (pendingDelete !== undefined) void remove(pendingDelete) }}
+            >
+              {t('delete')}
+            </Button>
+          </>
+        )}
+      >
+        <strong>{pendingDelete?.serverName}</strong>
+      </Modal>
     </section>
   )
 }
@@ -224,6 +248,7 @@ function Editor({
   const [secrets, setSecrets] = useState<Record<string, string>>({})
   const [discovering, setDiscovering] = useState(false)
   const [discoverError, setDiscoverError] = useState<string | undefined>(undefined)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const update = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
     const { name, value } = event.target
     setDraft(previous => ({ ...previous, [name]: value }))
@@ -274,69 +299,87 @@ function Editor({
     event.preventDefault()
     onSave(draft, Object.fromEntries(Object.entries(secrets).filter(([, value]) => value !== '')))
   }
+  const heading = record.createdAt === record.updatedAt ? t('addServer') : t('editServer')
   return (
-    <form className={styles.editor} onSubmit={submit}>
-      <h3>{record.createdAt === record.updatedAt ? t('addServer') : t('editServer')}</h3>
-      <label>{t('serverName')}<input name="serverName" value={draft.serverName} onChange={update} required /></label>
-      <label>{t('serverId')}<input name="id" value={draft.id} readOnly /></label>
-      <label className={styles.toggle}><input type="checkbox" checked={draft.enabled} onChange={event => { setDraft(previous => ({ ...previous, enabled: event.target.checked })) }} />{t('enabled')}</label>
-      <label>{t('transport')}
-        <select name="transport" value={draft.transport} onChange={update}>
-          <option value="stdio">{t('transportStdio')}</option>
-          <option value="streamable-http">{t('transportHttp')}</option>
-        </select>
-      </label>
-      {draft.transport === 'stdio'
-        ? <label>{t('command')}<input name="command" value={draft.command ?? ''} onChange={update} required /></label>
-        : <label>{t('url')}<input name="url" value={draft.url ?? ''} onChange={update} required /></label>}
-      <label>{t('authKind')}
-        <select value={draft.auth.kind} onChange={event => {
-          const kind = event.target.value as McpAuthConfig['kind']
-          updateAuth(kind === 'headers'
-            ? { kind, headerNames: [] }
-            : kind === 'oauth'
-              ? { kind, clientId: '', authorizeUrl: '', tokenUrl: '', scopes: [], redirectPath: DEFAULT_REDIRECT_PATH }
-              : { kind: 'none' })
-        }}>
-          <option value="none">{t('authNone')}</option>
-          <option value="headers">{t('authHeaders')}</option>
-          <option value="oauth">{t('authOAuth')}</option>
-        </select>
-      </label>
-      {headerAuth === undefined ? null : (
-        <>
-          <label>{t('headerNames')}<input value={headerAuth.headerNames.join(', ')} onChange={event => { updateAuth({ kind: 'headers', headerNames: event.target.value.split(',').map(name => name.trim()).filter(Boolean) }) }} /></label>
-          {headerAuth.headerNames.map(name => <label key={name}>{`${t('headerValue')}: ${name}`}<input type="password" value={secrets[name] ?? ''} onChange={event => { setSecrets(previous => ({ ...previous, [name]: event.target.value })) }} /></label>)}
-        </>
-      )}
-      {oauthAuth === undefined ? null : (
-        <>
-          <p className={styles.loginStatus}>{t('discoverOAuthHint')}</p>
-          <div className={styles.actions}>
-            <button type="button" className={styles.secondaryButton} disabled={discovering} onClick={discover}>
-              {discovering ? t('discoveringOAuth') : t('discoverOAuth')}
-            </button>
-          </div>
-          {discoverError === undefined ? null : <p className={styles.error} role="alert">{discoverError}</p>}
-          <label>{t('clientId')}<input value={oauthAuth.clientId} onChange={event => { updateAuth({ ...oauthAuth, clientId: event.target.value }) }} required /></label>
-          <label>{t('authorizeUrl')}<input type="url" value={oauthAuth.authorizeUrl} onChange={event => { updateAuth({ ...oauthAuth, authorizeUrl: event.target.value }) }} required /></label>
-          <label>{t('tokenUrl')}<input type="url" value={oauthAuth.tokenUrl} onChange={event => { updateAuth({ ...oauthAuth, tokenUrl: event.target.value }) }} required /></label>
-          <label>{t('scopes')}<input value={oauthAuth.scopes.join(' ')} onChange={event => { updateAuth({ ...oauthAuth, scopes: event.target.value.split(/\s+/).filter(Boolean) }) }} /></label>
-          <label>{t('redirectPath')}<input value={oauthAuth.redirectPath} onChange={event => { updateAuth({ ...oauthAuth, redirectPath: event.target.value }) }} pattern="/.*" required /></label>
-          <p className={styles.loginStatus}>{t('redirectPathHint')}<code>{`${location.origin}${oauthAuth.redirectPath}`}</code></p>
-          <label>{t('clientSecret')}<input type="password" value={secrets.OAUTH_CLIENT_SECRET ?? ''} onChange={event => { setSecrets(previous => ({ ...previous, OAUTH_CLIENT_SECRET: event.target.value })) }} /></label>
-        </>
-      )}
-      <label>{t('timeout')}<input type="number" value={draft.toolCallTimeoutMs} onChange={event => { setNumber('toolCallTimeoutMs', event.target.value) }} min="1" required /></label>
-      <label className={styles.toggle}><input type="checkbox" checked={draft.reconnect.enabled} onChange={event => { setDraft(previous => ({ ...previous, reconnect: { ...previous.reconnect, enabled: event.target.checked } })) }} />{t('reconnectEnabled')}</label>
-      <label>{t('reconnectInitialDelay')}<input type="number" value={draft.reconnect.initialDelayMs} onChange={event => { setNumber('initialDelayMs', event.target.value) }} min="0" required /></label>
-      <label>{t('reconnectMaxDelay')}<input type="number" value={draft.reconnect.maxDelayMs} onChange={event => { setNumber('maxDelayMs', event.target.value) }} min="0" required /></label>
-      <label>{t('reconnectMaxAttempts')}<input type="number" value={draft.reconnect.maxAttempts} onChange={event => { setNumber('maxAttempts', event.target.value) }} min="0" required /></label>
-      <div className={styles.actions}>
-        <button type="submit" className={styles.primaryButton}>{t('save')}</button>
-        <button type="button" className={styles.secondaryButton} onClick={onCancel}>{t('cancel')}</button>
-      </div>
-    </form>
+    <Modal open onClose={onCancel} title={heading} headless className={styles.editorDialog as string}>
+      <form className={styles.editor} onSubmit={submit}>
+        <h3 className={styles.editorTitle}>{heading}</h3>
+        <div className={styles.editorFields}>
+          {/* The dialog opens from a click elsewhere on the page, so the first field takes focus. */}
+          <label>{t('serverName')}<input name="serverName" value={draft.serverName} onChange={update} required autoFocus /></label>
+          <label className={styles.toggle}><input type="checkbox" checked={draft.enabled} onChange={event => { setDraft(previous => ({ ...previous, enabled: event.target.checked })) }} />{t('enabled')}</label>
+          <label>{t('transport')}
+            <select name="transport" value={draft.transport} onChange={update}>
+              <option value="stdio">{t('transportStdio')}</option>
+              <option value="streamable-http">{t('transportHttp')}</option>
+            </select>
+          </label>
+          {draft.transport === 'stdio'
+            ? <label>{t('command')}<input name="command" value={draft.command ?? ''} onChange={update} required /></label>
+            : <label>{t('url')}<input name="url" value={draft.url ?? ''} onChange={update} required /></label>}
+          <label>{t('authKind')}
+            <select value={draft.auth.kind} onChange={event => {
+              const kind = event.target.value as McpAuthConfig['kind']
+              updateAuth(kind === 'headers'
+                ? { kind, headerNames: [] }
+                : kind === 'oauth'
+                  ? { kind, clientId: '', authorizeUrl: '', tokenUrl: '', scopes: [], redirectPath: DEFAULT_REDIRECT_PATH }
+                  : { kind: 'none' })
+            }}>
+              <option value="none">{t('authNone')}</option>
+              <option value="headers">{t('authHeaders')}</option>
+              <option value="oauth">{t('authOAuth')}</option>
+            </select>
+          </label>
+          {headerAuth === undefined ? null : (
+            <>
+              <label>{t('headerNames')}<input value={headerAuth.headerNames.join(', ')} onChange={event => { updateAuth({ kind: 'headers', headerNames: event.target.value.split(',').map(name => name.trim()).filter(Boolean) }) }} /></label>
+              {headerAuth.headerNames.map(name => <label key={name}>{`${t('headerValue')}: ${name}`}<input type="password" value={secrets[name] ?? ''} onChange={event => { setSecrets(previous => ({ ...previous, [name]: event.target.value })) }} /></label>)}
+            </>
+          )}
+          {oauthAuth === undefined ? null : (
+            <>
+              <p className={styles.loginStatus}>{t('discoverOAuthHint')}</p>
+              <div className={styles.actions}>
+                <button type="button" className={styles.secondaryButton} disabled={discovering} onClick={discover}>
+                  {discovering ? t('discoveringOAuth') : t('discoverOAuth')}
+                </button>
+              </div>
+              {discoverError === undefined ? null : <p className={styles.error} role="alert">{discoverError}</p>}
+              <label>{t('clientId')}<input value={oauthAuth.clientId} onChange={event => { updateAuth({ ...oauthAuth, clientId: event.target.value }) }} required /></label>
+              <label>{t('authorizeUrl')}<input type="url" value={oauthAuth.authorizeUrl} onChange={event => { updateAuth({ ...oauthAuth, authorizeUrl: event.target.value }) }} required /></label>
+              <label>{t('tokenUrl')}<input type="url" value={oauthAuth.tokenUrl} onChange={event => { updateAuth({ ...oauthAuth, tokenUrl: event.target.value }) }} required /></label>
+              <label>{t('scopes')}<input value={oauthAuth.scopes.join(' ')} onChange={event => { updateAuth({ ...oauthAuth, scopes: event.target.value.split(/\s+/).filter(Boolean) }) }} /></label>
+              <label>{t('redirectPath')}<input value={oauthAuth.redirectPath} onChange={event => { updateAuth({ ...oauthAuth, redirectPath: event.target.value }) }} pattern="/.*" required /></label>
+              <p className={styles.loginStatus}>{t('redirectPathHint')}<code>{`${location.origin}${oauthAuth.redirectPath}`}</code></p>
+              <label>{t('clientSecret')}<input type="password" value={secrets.OAUTH_CLIENT_SECRET ?? ''} onChange={event => { setSecrets(previous => ({ ...previous, OAUTH_CLIENT_SECRET: event.target.value })) }} /></label>
+            </>
+          )}
+          <button
+            type="button"
+            className={styles.advancedToggle}
+            aria-expanded={advancedOpen}
+            onClick={() => { setAdvancedOpen(open => !open) }}
+          >
+            {t('advanced')}
+          </button>
+          {!advancedOpen ? null : (
+            <>
+              <label>{t('serverId')}<input name="id" value={draft.id} readOnly /></label>
+              <label>{t('timeout')}<input type="number" value={draft.toolCallTimeoutMs} onChange={event => { setNumber('toolCallTimeoutMs', event.target.value) }} min="1" required /></label>
+              <label className={styles.toggle}><input type="checkbox" checked={draft.reconnect.enabled} onChange={event => { setDraft(previous => ({ ...previous, reconnect: { ...previous.reconnect, enabled: event.target.checked } })) }} />{t('reconnectEnabled')}</label>
+              <label>{t('reconnectInitialDelay')}<input type="number" value={draft.reconnect.initialDelayMs} onChange={event => { setNumber('initialDelayMs', event.target.value) }} min="0" required /></label>
+              <label>{t('reconnectMaxDelay')}<input type="number" value={draft.reconnect.maxDelayMs} onChange={event => { setNumber('maxDelayMs', event.target.value) }} min="0" required /></label>
+              <label>{t('reconnectMaxAttempts')}<input type="number" value={draft.reconnect.maxAttempts} onChange={event => { setNumber('maxAttempts', event.target.value) }} min="0" required /></label>
+            </>
+          )}
+        </div>
+        <div className={styles.editorFooter}>
+          <Button variant="outline" onClick={onCancel}>{t('cancel')}</Button>
+          <Button variant="primary" type="submit">{t('save')}</Button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
