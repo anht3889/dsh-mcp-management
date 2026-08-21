@@ -63,8 +63,7 @@
       "inject": [
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-web-react"
+        "@deepseek-ai/dsh-client-locale"
       ]
     }
   },
@@ -86,7 +85,6 @@
     "@deepseek-ai/dsh-client-ui-primitives": "*",
     "@deepseek-ai/dsh-client-ui-settings": "*",
     "@deepseek-ai/dsh-client-locale": "*",
-    "@deepseek-ai/dsh-client-web-react": "*",
     "@deepseek-ai/dsh-invariants": "*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -98,7 +96,6 @@
     "@deepseek-ai/dsh-client-ui-primitives": "link:../../../deepseek-harness/packages/client/ui-primitives",
     "@deepseek-ai/dsh-client-ui-settings": "link:../../../deepseek-harness/packages/client/ui-settings",
     "@deepseek-ai/dsh-client-locale": "link:../../../deepseek-harness/packages/client/locale",
-    "@deepseek-ai/dsh-client-web-react": "link:../../../deepseek-harness/packages/client/web-react",
     "@deepseek-ai/dsh-host-webserver": "link:../../../deepseek-harness/packages/host/webserver",
     "@deepseek-ai/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
     "@deepseek-ai/dsh-invariants": "0.1.0-rc.6",

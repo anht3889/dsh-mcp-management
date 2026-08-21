@@ -30,9 +30,6 @@
       "path": "../../../deepseek-harness/packages/client/locale"
     },
     {
-      "path": "../../../deepseek-harness/packages/client/web-react"
-    },
-    {
       "path": "../../../deepseek-harness/packages/runtime-diagnostics/invariants"
     }
   ]

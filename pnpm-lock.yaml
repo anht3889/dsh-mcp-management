@@ -51,9 +51,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: link:../../../deepseek-harness/packages/client/ui-slots
         version: link:../../../deepseek-harness/packages/client/ui-slots
-      '@deepseek-ai/dsh-client-web-react':
-        specifier: link:../../../deepseek-harness/packages/client/web-react
-        version: link:../../../deepseek-harness/packages/client/web-react
       '@deepseek-ai/dsh-host-webserver':
         specifier: link:../../../deepseek-harness/packages/host/webserver
         version: link:../../../deepseek-harness/packages/host/webserver
