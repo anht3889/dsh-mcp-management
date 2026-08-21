@@ -11,7 +11,7 @@ From npm (after the packages are published):
 npx @deepseek-ai/dsh plugin --profile web add @anht3889/dsh-mcp-mgmt-bundle@0.0.5
 ```
 
-From a local checkout (development):
+From a local checkout (development), with a `deepseek-harness` checkout beside this repository — `tsc` resolves harness project references from there:
 
 ```sh
 pnpm install && pnpm run build

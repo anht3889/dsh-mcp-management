@@ -28,6 +28,7 @@ Ship an installable DeepSeek Harness profile bundle that provides first-class MC
 | A profile plugin cannot resolve the installation's cordis | Seam types only; publish with `ctx.provide('mcp', runtime)`, never `extends Service` |
 | The profile loader imports plugins by name from the profile directory | Mount plugins as exports of the installable bundle package |
 | The sibling harness checkout ships no built JavaScript | Runtime harness dependencies use published releases; links stay type-only |
+| The harness client-bundle preset is unpublished and repo-scoped | This repo owns `packages/bundle/tsdown.config.ts` and reproduces the loader artifact format itself |
 
 ## Architecture
 
@@ -66,6 +67,20 @@ packages/
 ```
 
 **npm scope:** `@anht3889/dsh-mcp-mgmt-<name>` (personal publish scope; avoids collision with `@deepseek-ai/dsh-mcp-client`).
+
+### Client bundle build
+
+`packages/bundle/tsdown.config.ts` builds both halves of the bundle package: the Node entry points the Loader imports, and the browser artifact the web shell fetches. The harness has an equivalent preset at `packages/client/tsdown.client.ts`, but it is unpublished and resolves each package's manifest by globbing `packages/*/*/package.json` under its own checkout, so since harness commit [`aa03eff5`](https://github.com/deepseek-ai/deepseek-harness/commit/aa03eff50) it throws for any package outside that repository. The harness documents the same conclusion for out-of-tree packages: reproduce the artifact format yourself.
+
+The web shell's module loader defines that format, so this config reproduces it:
+
+- one CJS closure handed to `window.__ModuleLoader__.load({ id, factory })`, where shared specifiers arrive through the injected `require`;
+- externals are exactly what the shell shares — its platform module table plus anything the manifest requests in `dsh.client.external` — and everything else inlines, because a `require` the module table cannot answer throws when the plugin loads;
+- a `.module.css` import compiles to a hashed class map and injects a tagged `<style data-plugin-css>` when the factory runs, so styles arrive with the plugin.
+
+Two deliberate departures from the harness preset: CSS class hashes come from a package-relative path, which makes the artifact identical across checkouts, and there is no build-face selection, because this package builds standalone rather than in the harness's two-pass root build. The preset also rebases sourcemap paths onto the harness repository root, which describes nothing for a package outside it, so the map keeps paths relative to the artifact and relies on its `sourcesContent`. Everything else was verified by diffing `lib/client.js` and its map against the preset's own output for the same sources.
+
+Only the bundling step is self-contained. `tsc` still resolves harness project references, so a build needs the sibling checkout.
 
 **Peers / deps (align to a documented harness release):** `@deepseek-ai/cordis`, `@deepseek-ai/dsh-tools`, `@deepseek-ai/dsh-host-webserver`, `@deepseek-ai/dsh-credentials` (optional at runtime), `@deepseek-ai/schemastery`, `@modelcontextprotocol/sdk`, client slot/UI peers as required by the Settings section pattern.
 

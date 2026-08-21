@@ -75,6 +75,9 @@ importers:
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0
+      lightningcss:
+        specifier: ^1.32.0
+        version: 1.33.0
       react:
         specifier: ^18.2.0
         version: 18.3.1
