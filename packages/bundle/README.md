@@ -60,3 +60,7 @@ Each server's callback URL is the live web origin plus that server's `auth.redir
 | [`@anht3889/dsh-mcp-mgmt-bundle`](https://www.npmjs.com/package/@anht3889/dsh-mcp-mgmt-bundle) | Installable surface: patch, manager, Settings UI |
 | [`@anht3889/dsh-mcp-mgmt-mcp`](https://www.npmjs.com/package/@anht3889/dsh-mcp-mgmt-mcp) | `ctx.mcp` vocabulary (library) |
 | [`@anht3889/dsh-mcp-mgmt-oauth`](https://www.npmjs.com/package/@anht3889/dsh-mcp-mgmt-oauth) | PKCE OAuth + discovery (library) |
+
+## License
+
+[MIT](LICENSE)
